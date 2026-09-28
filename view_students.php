@@ -1,0 +1,138 @@
+<?php
+session_start();
+if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
+include 'db.php';
+
+$search = "";
+$where = "";
+if (!empty($_GET['q'])) {
+    $search = trim($_GET['q']);
+    $where = "WHERE s.full_name LIKE '%$search%' OR s.student_id LIKE '%$search%'";
+}
+
+$students = $conn->query("
+    SELECT s.*, 
+           (SELECT COUNT(*) FROM cars WHERE student_id = s.id) AS car_count
+    FROM students s
+    $where
+    ORDER BY s.id DESC
+");
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Students - Sardam Institute</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: #fff; border-right: 1px solid #e2e8f0; }
+        .sidebar-header { padding: 20px 18px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; }
+        .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; }
+        .sidebar-header .name { font-size: 13px; font-weight: 700; line-height: 1.3; }
+        .sidebar-header .name span { display: block; font-weight: 400; color: #64748b; font-size: 10.5px; }
+        .sidebar nav { padding: 16px 12px; }
+        .nav-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 12px 12px 8px; }
+        .sidebar nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #475569; text-decoration: none; font-size: 13.5px; font-weight: 500; border-radius: 8px; margin-bottom: 2px; }
+        .sidebar nav a:hover { background: #f1f5f9; color: #0f172a; }
+        .sidebar nav a.active { background: #0f172a; color: #fff; }
+        .sidebar nav a svg { width: 18px; height: 18px; }
+        .main { margin-left: 250px; padding: 32px; }
+        .page-title { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+        .toolbar { display: flex; gap: 12px; margin-bottom: 20px; }
+        .toolbar form { display: flex; flex: 1; gap: 12px; }
+        .toolbar input { flex: 1; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; font-family: inherit; }
+        .toolbar input:focus { outline: none; border-color: #0f172a; }
+        .toolbar button { background: #0f172a; color: #fff; padding: 12px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-add { background: #2563eb; color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 500; white-space: nowrap; }
+        .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8fafc; padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+        .avatar-sm { width: 36px; height: 36px; border-radius: 50%; background: #0f172a; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; vertical-align: middle; margin-right: 10px; }
+        .student-id { font-family: monospace; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+        .car-badge { display: inline-block; background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .no-cars { color: #94a3b8; font-size: 12px; }
+        .actions { display: flex; gap: 10px; }
+        .btn-edit { color: #2563eb; text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 10px; border: 1px solid #dbeafe; border-radius: 6px; background: #eff6ff; }
+        .btn-edit:hover { background: #dbeafe; }
+        .btn-del { color: #dc2626; text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 10px; border: 1px solid #fee2e2; border-radius: 6px; background: #fef2f2; }
+        .btn-del:hover { background: #fee2e2; }
+        .empty { text-align: center; padding: 60px; color: #64748b; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="logo.png" alt="Logo">
+            <div class="name">Sardam Institute<span>Computer Sciences</span></div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <a href="dashboard.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
+            <div class="nav-label">Management</div>
+            <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
+            <a href="view_students.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
+            <div class="nav-label">Operations</div>
+            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search Plate</a>
+            <a href="view_logs.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg> Entry Logs</a>
+            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
+        </nav>
+    </aside>
+    <main class="main">
+        <h1 class="page-title">All Students</h1>
+        <div class="toolbar">
+            <form method="GET">
+                <input type="text" name="q" placeholder="Search by name or student ID..." value="<?php echo htmlspecialchars($search); ?>">
+                <button type="submit">Search</button>
+            </form>
+            <a href="add_student.php" class="btn-add">+ Add Student</a>
+        </div>
+
+        <?php if ($students->num_rows === 0): ?>
+            <div class="empty">No students found.</div>
+        <?php else: ?>
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Student ID</th>
+                            <th>Department</th>
+                            <th>Cars</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($s = $students->fetch_assoc()): ?>
+                            <tr>
+                                <td>
+                                    <span class="avatar-sm"><?php echo strtoupper(substr($s['full_name'], 0, 1)); ?></span>
+                                    <strong><?php echo htmlspecialchars($s['full_name']); ?></strong>
+                                </td>
+                                <td><span class="student-id"><?php echo htmlspecialchars($s['student_id']); ?></span></td>
+                                <td><?php echo htmlspecialchars($s['department'] ?: '—'); ?></td>
+                                <td>
+                                    <?php if ($s['car_count'] > 0): ?>
+                                        <span class="car-badge"><?php echo $s['car_count']; ?> car<?php echo $s['car_count'] > 1 ? 's' : ''; ?></span>
+                                    <?php else: ?>
+                                        <span class="no-cars">No cars</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <div class="actions">
+                                        <a href="edit_student.php?id=<?php echo $s['id']; ?>" class="btn-edit">Edit</a>
+                                        <a href="delete_student.php?id=<?php echo $s['id']; ?>" class="btn-del" onclick="return confirm('Delete <?php echo htmlspecialchars($s['full_name']); ?>?')">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </main>
+</body>
+</html>
