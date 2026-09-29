@@ -24,15 +24,16 @@ $students = $conn->query("
 <head>
     <title>All Students - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
-        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: #fff; border-right: 1px solid #e2e8f0; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px 18px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; }
         .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; }
         .sidebar-header .name { font-size: 13px; font-weight: 700; line-height: 1.3; }
         .sidebar-header .name span { display: block; font-weight: 400; color: #64748b; font-size: 10.5px; }
-        .sidebar nav { padding: 16px 12px; }
+        .sidebar nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
         .nav-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 12px 12px 8px; }
         .sidebar nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #475569; text-decoration: none; font-size: 13.5px; font-weight: 500; border-radius: 8px; margin-bottom: 2px; }
         .sidebar nav a:hover { background: #f1f5f9; color: #0f172a; }
@@ -60,19 +61,30 @@ $students = $conn->query("
         .no-cars { color: #94a3b8; font-size: 12px; }
         .actions { display: flex; gap: 10px; }
         .btn-edit { color: #2563eb; text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 10px; border: 1px solid #dbeafe; border-radius: 6px; background: #eff6ff; }
-        .btn-edit:hover { background: #dbeafe; }
         .btn-del { color: #dc2626; text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 10px; border: 1px solid #fee2e2; border-radius: 6px; background: #fef2f2; }
-        .btn-del:hover { background: #fee2e2; }
         .btn-view { color: #059669; text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 10px; border: 1px solid #d1fae5; border-radius: 6px; background: #ecfdf5; }
-        .btn-view:hover { background: #d1fae5; }
         .empty { text-align: center; padding: 60px; color: #64748b; }
     </style>
+    <script>
+    (function() {
+        try {
+            var saved = localStorage.getItem('theme') || 'light';
+            if (saved === 'dark') document.documentElement.classList.add('dark-mode');
+        } catch(e) {}
+    })();
+    </script>
 </head>
 <body>
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="logo.png" alt="Logo">
             <div class="name">Sardam Institute<span>Computer Sciences</span></div>
+        </div>
+        <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Theme</span>
+            <button onclick="toggleTheme()" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
         </div>
         <nav>
             <div class="nav-label">Main</div>
@@ -85,6 +97,10 @@ $students = $conn->query("
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
+            <div class="nav-label">Account</div>
+            <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
+            <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Change Password</a>
+            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sign Out</a>
         </nav>
     </aside>
     <main class="main">
@@ -143,5 +159,11 @@ $students = $conn->query("
             </div>
         <?php endif; ?>
     </main>
+    <script>
+    function toggleTheme() {
+        var isDark = document.documentElement.classList.toggle('dark-mode');
+        try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e) {}
+    }
+    </script>
 </body>
 </html>

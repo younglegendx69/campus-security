@@ -24,6 +24,8 @@ $logs = $conn->query("
 <head>
     <title>Entry Logs - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="theme.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
@@ -54,10 +56,19 @@ $logs = $conn->query("
     </style>
 </head>
 <body>
+<script src="theme.js"></script>
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="logo.png" alt="Logo">
             <div class="name">Sardam Institute<span><?php echo $is_admin ? 'Computer Sciences' : 'Guard Panel'; ?></span></div>
+        </div>
+        <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Theme</span>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
         </div>
         <nav>
             <div class="nav-label">Main</div>

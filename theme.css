@@ -1,0 +1,448 @@
+/* ========== THEME TOGGLE BUTTON ========== */
+.theme-toggle {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s;
+    padding: 0;
+}
+.theme-toggle:hover { background: #e2e8f0; }
+
+/* ========== GLOBAL ========== */
+html.dark-mode,
+html.dark-mode body,
+html.dark-mode .main,
+html.dark-mode .content {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode h1,
+html.dark-mode h2,
+html.dark-mode h3,
+html.dark-mode .page-title,
+html.dark-mode .section-head {
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode p,
+html.dark-mode .page-sub {
+    color: #94a3b8 !important;
+}
+
+/* ========== SIDEBAR ========== */
+html.dark-mode .sidebar {
+    background: #1e293b !important;
+    border-right-color: #334155 !important;
+}
+html.dark-mode .sidebar-header {
+    border-bottom-color: #334155 !important;
+}
+html.dark-mode .sidebar-header .name,
+html.dark-mode .sidebar-header .name span {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .sidebar nav a {
+    color: #94a3b8 !important;
+}
+html.dark-mode .sidebar nav a:hover {
+    background: #334155 !important;
+    color: #ffffff !important;
+}
+html.dark-mode .sidebar nav a.active {
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+html.dark-mode .nav-label {
+    color: #64748b !important;
+}
+html.dark-mode .sidebar > div[style*="border-bottom"] {
+    border-bottom-color: #334155 !important;
+}
+
+/* ========== TOPBAR ========== */
+html.dark-mode .topbar {
+    background: #1e293b !important;
+    border-bottom-color: #334155 !important;
+}
+html.dark-mode .topbar h1 {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .user-info .name {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .user-info .role {
+    color: #94a3b8 !important;
+}
+html.dark-mode .logout-btn {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+    border-color: #475569 !important;
+}
+html.dark-mode .logout-btn:hover {
+    background: #475569 !important;
+    color: #fca5a5 !important;
+}
+html.dark-mode .avatar {
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* ========== CARDS & CONTAINERS ========== */
+html.dark-mode .card,
+html.dark-mode .stat,
+html.dark-mode .search-card,
+html.dark-mode .table-card,
+html.dark-mode .blacklist-card,
+html.dark-mode .csv-card,
+html.dark-mode .preview-card,
+html.dark-mode .report,
+html.dark-mode .stat-box {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode .card h3,
+html.dark-mode .stat-label,
+html.dark-mode .stat-value,
+html.dark-mode .student-name,
+html.dark-mode .name-cell,
+html.dark-mode .student-name-lg {
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode .section-head {
+    border-bottom-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode .stat-sub,
+html.dark-mode .meta-cell {
+    color: #94a3b8 !important;
+}
+html.dark-mode .stat-icon,
+html.dark-mode .card .icon-box {
+    background: #334155 !important;
+}
+html.dark-mode .stat-box .num {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .stat-box .lbl {
+    color: #94a3b8 !important;
+}
+
+/* ========== USER INFO CARD (Change Password) ========== */
+html.dark-mode .user-info {
+    background: #273549 !important;
+    border-color: #334155 !important;
+}
+html.dark-mode .user-info .username,
+html.dark-mode .user-meta .username {
+    color: #ffffff !important;
+}
+html.dark-mode .user-info .role,
+html.dark-mode .user-meta .role {
+    color: #94a3b8 !important;
+}
+html.dark-mode .user-avatar {
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* ========== DASHBOARD QUICK CARDS ========== */
+html.dark-mode .big-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+html.dark-mode .big-card:hover {
+    border-color: #2563eb !important;
+}
+html.dark-mode .big-card h2 {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .big-card p {
+    color: #94a3b8 !important;
+}
+html.dark-mode .big-card .icon {
+    background: #334155 !important;
+}
+html.dark-mode .welcome-box {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+}
+
+/* ========== TABLES ========== */
+html.dark-mode table {
+    color: #e2e8f0 !important;
+}
+html.dark-mode th {
+    background: #0f172a !important;
+    color: #94a3b8 !important;
+    border-bottom-color: #334155 !important;
+}
+html.dark-mode td {
+    border-bottom-color: #334155 !important;
+}
+html.dark-mode tr:hover td {
+    background: #273549 !important;
+}
+html.dark-mode .avatar-sm {
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+html.dark-mode .student-id {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+}
+html.dark-mode .car-badge {
+    background: #1e3a8a !important;
+    color: #bfdbfe !important;
+}
+html.dark-mode .no-cars {
+    color: #64748b !important;
+}
+
+/* ========== INPUTS & FORMS ========== */
+html.dark-mode input[type="text"],
+html.dark-mode input[type="password"],
+html.dark-mode input[type="email"],
+html.dark-mode input[type="file"],
+html.dark-mode textarea,
+html.dark-mode select {
+    background: #0f172a !important;
+    border-color: #475569 !important;
+    color: #ffffff !important;
+}
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+    color: #64748b !important;
+}
+html.dark-mode input[readonly] {
+    background: #334155 !important;
+    color: #94a3b8 !important;
+}
+html.dark-mode label {
+    color: #cbd5e1 !important;
+}
+html.dark-mode .hint,
+html.dark-mode .optional {
+    color: #94a3b8 !important;
+}
+html.dark-mode .search-form input,
+html.dark-mode .toolbar input {
+    background: #0f172a !important;
+    border-color: #475569 !important;
+    color: #ffffff !important;
+}
+html.dark-mode .search-tips {
+    color: #94a3b8 !important;
+}
+html.dark-mode .search-tips strong {
+    color: #e2e8f0 !important;
+}
+
+/* ========== ALERTS ========== */
+html.dark-mode .alert-success {
+    background: #14532d !important;
+    color: #bbf7d0 !important;
+    border-color: #166534 !important;
+}
+html.dark-mode .alert-error {
+    background: #7f1d1d !important;
+    color: #fecaca !important;
+    border-color: #991b1b !important;
+}
+html.dark-mode .warning-box,
+html.dark-mode .guard-note {
+    background: #78350f !important;
+    color: #fde68a !important;
+    border-color: #92400e !important;
+}
+html.dark-mode .info-note {
+    background: #0c4a6e !important;
+    color: #bae6fd !important;
+    border-color: #075985 !important;
+}
+
+/* ========== SEARCH RESULTS ========== */
+html.dark-mode .result-card,
+html.dark-mode .student-result {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+html.dark-mode .plate-badge {
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+html.dark-mode .info-row label,
+html.dark-mode .info-row .label {
+    color: #94a3b8 !important;
+}
+html.dark-mode .info-row .value {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .student-photo {
+    background: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+/* ========== STUDENT PROFILE ========== */
+html.dark-mode .profile-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+}
+html.dark-mode .info-row {
+    border-bottom-color: #334155 !important;
+}
+html.dark-mode .car-card,
+html.dark-mode .car-mini,
+html.dark-mode .car-box {
+    background: #273549 !important;
+    border-color: #334155 !important;
+}
+html.dark-mode .car-card .model,
+html.dark-mode .car-box-header {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .car-card .color,
+html.dark-mode .car-mini .car-details {
+    color: #94a3b8 !important;
+}
+html.dark-mode .empty-cars,
+html.dark-mode .empty-cars-msg {
+    color: #64748b !important;
+}
+
+/* ========== BLACKLIST ========== */
+html.dark-mode .plate {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+}
+html.dark-mode .duration-badge {
+    background: #78350f !important;
+    color: #fde68a !important;
+}
+html.dark-mode .duration-badge.perm {
+    background: #7f1d1d !important;
+    color: #fecaca !important;
+}
+html.dark-mode .expires-info {
+    color: #94a3b8 !important;
+}
+html.dark-mode .badge-blocked-sm {
+    background: #7f1d1d !important;
+    color: #fecaca !important;
+}
+html.dark-mode .badge-locked {
+    background: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+/* ========== TABS ========== */
+html.dark-mode .tabs {
+    background: #334155 !important;
+}
+html.dark-mode .tab {
+    color: #94a3b8 !important;
+}
+html.dark-mode .tab.active {
+    background: #1e293b !important;
+    color: #ffffff !important;
+}
+
+/* ========== MODAL ========== */
+html.dark-mode .modal {
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+html.dark-mode .modal h3 {
+    color: #e2e8f0 !important;
+}
+html.dark-mode .modal p,
+html.dark-mode .modal label {
+    color: #94a3b8 !important;
+}
+html.dark-mode .modal-btn-cancel {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+}
+html.dark-mode .camera-modal {
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+/* ========== CSV / INSTRUCTIONS ========== */
+html.dark-mode .instructions {
+    background: #0f172a !important;
+    color: #cbd5e1 !important;
+}
+html.dark-mode .instructions code {
+    background: #1e293b !important;
+    color: #fbbf24 !important;
+}
+html.dark-mode .preview-card {
+    border-color: #dc2626 !important;
+}
+html.dark-mode .preview-card h3 {
+    color: #fca5a5 !important;
+}
+html.dark-mode .preview-list {
+    border-color: #334155 !important;
+}
+html.dark-mode .preview-row {
+    border-bottom-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+html.dark-mode .preview-row.matched {
+    background: #7f1d1d !important;
+}
+html.dark-mode .preview-row.not-found {
+    background: #0f172a !important;
+    color: #94a3b8 !important;
+}
+html.dark-mode .preview-summary {
+    color: #cbd5e1 !important;
+}
+html.dark-mode .preview-summary strong {
+    color: #fca5a5 !important;
+}
+
+/* ========== THEME TOGGLE IN DARK MODE ========== */
+html.dark-mode .theme-toggle {
+    background: #334155 !important;
+    border-color: #475569 !important;
+    color: #fbbf24 !important;
+}
+html.dark-mode .theme-toggle:hover {
+    background: #475569 !important;
+}
+
+/* ========== EMPTY STATE ========== */
+html.dark-mode .empty,
+html.dark-mode .empty-state,
+html.dark-mode .no-result,
+html.dark-mode .no-match {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+html.dark-mode .empty-state h3,
+html.dark-mode .no-result h3 {
+    color: #94a3b8 !important;
+}
+html.dark-mode .no-result h3 {
+    color: #fca5a5 !important;
+}
+
+/* ========== SMOOTH TRANSITION ========== */
+body, .sidebar, .card, .stat, .topbar, .modal, table, th, td, input, textarea, select {
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}

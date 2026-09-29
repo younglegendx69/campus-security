@@ -8,7 +8,6 @@ $is_guard = ($_SESSION['role'] == 'guard');
 $success = "";
 $error = "";
 
-// Duration options → seconds (NULL = permanent)
 $durations = [
     "1 Hour"    => 3600,
     "6 Hours"   => 21600,
@@ -22,7 +21,6 @@ $durations = [
     "Permanent" => null
 ];
 
-// ---- Blacklist a car (BOTH admin and guard) ----
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['blacklist_car'])) {
     $car_id = intval($_POST['car_id']);
     $reason = trim($_POST['reason']);
@@ -49,7 +47,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['blacklist_car'])) {
                 if (isset($durations[$duration]) && $durations[$duration] !== null) {
                     $expires_at = date('Y-m-d H:i:s', time() + $durations[$duration]);
                 }
-
                 $added_by = $_SESSION['user_id'];
                 $ins = $conn->prepare("INSERT INTO blacklist (plate_number, reason, expires_at, added_by, duration_label) VALUES (?, ?, ?, ?, ?)");
                 $ins->bind_param("sssis", $plate, $reason, $expires_at, $added_by, $duration);
@@ -62,7 +59,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['blacklist_car'])) {
     }
 }
 
-// ---- Remove from blacklist (ADMIN ONLY) ----
 if ($is_admin && isset($_GET['remove'])) {
     $id = intval($_GET['remove']);
     $conn->query("DELETE FROM blacklist WHERE id = $id");
@@ -70,7 +66,6 @@ if ($is_admin && isset($_GET['remove'])) {
     exit;
 }
 
-// ---- Search students ----
 $search = "";
 $students_found = null;
 $students_count = 0;
@@ -95,10 +90,8 @@ if (!empty($_GET['q'])) {
     $students_count = $students_found->num_rows;
 }
 
-// ---- Clean up expired blacklist entries automatically ----
 $conn->query("DELETE FROM blacklist WHERE expires_at IS NOT NULL AND expires_at <= NOW()");
 
-// ---- Blacklisted list (with active filter) ----
 $list = $conn->query("
     SELECT b.id, b.plate_number, b.reason, b.date_added, b.expires_at, b.duration_label,
            u.username AS added_by_username,
@@ -110,16 +103,12 @@ $list = $conn->query("
     ORDER BY b.date_added DESC
 ");
 
-// Helper — check if plate actively blacklisted
 function isPlateBlacklisted($conn, $plate) {
     $stmt = $conn->prepare("SELECT reason, expires_at FROM blacklist WHERE plate_number = ? AND (expires_at IS NULL OR expires_at > NOW())");
     $stmt->bind_param("s", $plate);
     $stmt->execute();
     $r = $stmt->get_result();
-    if ($r->num_rows > 0) {
-        $row = $r->fetch_assoc();
-        return $row;
-    }
+    if ($r->num_rows > 0) return $r->fetch_assoc();
     return false;
 }
 ?>
@@ -128,15 +117,16 @@ function isPlateBlacklisted($conn, $plate) {
 <head>
     <title>Blacklist - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
-        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: #fff; border-right: 1px solid #e2e8f0; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px 18px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; }
         .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; }
         .sidebar-header .name { font-size: 13px; font-weight: 700; line-height: 1.3; }
         .sidebar-header .name span { display: block; font-weight: 400; color: #64748b; font-size: 10.5px; }
-        .sidebar nav { padding: 16px 12px; }
+        .sidebar nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
         .nav-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 12px 12px 8px; }
         .sidebar nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #475569; text-decoration: none; font-size: 13.5px; font-weight: 500; border-radius: 8px; margin-bottom: 2px; }
         .sidebar nav a:hover { background: #f1f5f9; color: #0f172a; }
@@ -186,14 +176,10 @@ function isPlateBlacklisted($conn, $plate) {
         .btn-remove { color: #dc2626; text-decoration: none; font-size: 13px; font-weight: 500; }
         .empty { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
         .no-match { background: #fff; padding: 40px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; color: #64748b; }
-
-        /* Duration badge */
         .duration-badge { display: inline-block; background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 5px; font-size: 11.5px; font-weight: 600; }
         .duration-badge.perm { background: #fee2e2; color: #991b1b; }
         .expires-info { font-size: 11.5px; color: #64748b; margin-top: 3px; }
         .expires-info.soon { color: #dc2626; font-weight: 600; }
-
-        /* Modal */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
         .modal-overlay.active { display: flex; }
         .modal { background: #fff; padding: 28px; border-radius: 14px; max-width: 460px; width: 100%; }
@@ -206,6 +192,14 @@ function isPlateBlacklisted($conn, $plate) {
         .modal-btn-cancel { background: #f1f5f9; color: #475569; padding: 11px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
         .modal-btn-confirm { background: #dc2626; color: #fff; padding: 11px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
     </style>
+    <script>
+    (function() {
+        try {
+            var saved = localStorage.getItem('theme') || 'light';
+            if (saved === 'dark') document.documentElement.classList.add('dark-mode');
+        } catch(e) {}
+    })();
+    </script>
 </head>
 <body>
     <aside class="sidebar">
@@ -213,9 +207,16 @@ function isPlateBlacklisted($conn, $plate) {
             <img src="logo.png" alt="Logo">
             <div class="name">Sardam Institute<span><?php echo $is_admin ? 'Computer Sciences' : 'Guard Panel'; ?></span></div>
         </div>
+        <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Theme</span>
+            <button onclick="toggleTheme()" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+        </div>
         <nav>
             <div class="nav-label">Main</div>
             <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
+
             <?php if ($is_admin): ?>
                 <div class="nav-label">Management</div>
                 <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
@@ -223,10 +224,17 @@ function isPlateBlacklisted($conn, $plate) {
                 <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
                 <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
             <?php endif; ?>
+
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
-            <a href="view_logs.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg> Entry Logs</a>
             <a href="blacklist.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
+
+            <?php if ($is_admin): ?>
+                <div class="nav-label">Account</div>
+                <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
+                <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Change Password</a>
+            <?php endif; ?>
+            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sign Out</a>
         </nav>
     </aside>
     <main class="main">
@@ -240,7 +248,6 @@ function isPlateBlacklisted($conn, $plate) {
         <?php if ($success) echo "<div class='alert alert-success'>$success</div>"; ?>
         <?php if ($error) echo "<div class='alert alert-error'>$error</div>"; ?>
 
-        <!-- Search Section -->
         <div class="search-card">
             <h3>Search Student</h3>
             <form method="GET" class="search-form">
@@ -249,7 +256,6 @@ function isPlateBlacklisted($conn, $plate) {
             </form>
         </div>
 
-        <!-- Search Results -->
         <?php if ($searched): ?>
             <?php if ($students_count === 0): ?>
                 <div class="no-match">No students found matching "<?php echo htmlspecialchars($search); ?>".</div>
@@ -310,7 +316,7 @@ function isPlateBlacklisted($conn, $plate) {
                                                         echo $r->fetch_assoc()['id'];
                                                     ?>" class="btn-unblock" onclick="return confirm('Remove from blacklist?')">Unblock</a>
                                                 <?php else: ?>
-                                                    <span class="badge-locked">🔒 Admin only</span>
+                                                    <span class="badge-locked">Admin only</span>
                                                 <?php endif; ?>
                                             <?php else: ?>
                                                 <button type="button" class="btn-blacklist" onclick="openBlacklistModal(<?php echo $car['id']; ?>, '<?php echo htmlspecialchars($car['plate_number'], ENT_QUOTES); ?>')">Blacklist</button>
@@ -325,7 +331,6 @@ function isPlateBlacklisted($conn, $plate) {
             <?php endif; ?>
         <?php endif; ?>
 
-        <!-- Active Blacklist Table -->
         <div class="blacklist-card">
             <h3>Currently Blacklisted Plates (<?php echo $list->num_rows; ?>)</h3>
             <?php if ($list->num_rows === 0): ?>
@@ -362,8 +367,7 @@ function isPlateBlacklisted($conn, $plate) {
                                 <?php if ($row['expires_at']): ?>
                                     <?php 
                                     $expires = strtotime($row['expires_at']);
-                                    $now = time();
-                                    $soon = ($expires - $now) < 3600; // less than 1 hour left
+                                    $soon = ($expires - time()) < 3600;
                                     ?>
                                     <div class="expires-info <?php echo $soon ? 'soon' : ''; ?>">
                                         <?php echo date('M d, Y H:i', $expires); ?>
@@ -383,7 +387,6 @@ function isPlateBlacklisted($conn, $plate) {
         </div>
     </main>
 
-    <!-- Modal -->
     <div class="modal-overlay" id="blacklistModal">
         <div class="modal">
             <h3>Blacklist Vehicle</h3>
@@ -391,10 +394,8 @@ function isPlateBlacklisted($conn, $plate) {
             <form method="POST">
                 <input type="hidden" name="blacklist_car" value="1">
                 <input type="hidden" name="car_id" id="modal-car-id">
-
                 <label>Reason *</label>
-                <input type="text" name="reason" placeholder="e.g. Suspicious behavior, unauthorized entry" required autofocus>
-
+                <input type="text" name="reason" placeholder="e.g. Suspicious behavior" required autofocus>
                 <label>Duration</label>
                 <select name="duration" required>
                     <option value="1 Hour">1 Hour</option>
@@ -408,7 +409,6 @@ function isPlateBlacklisted($conn, $plate) {
                     <option value="1 Year">1 Year</option>
                     <option value="Permanent">Permanent (until removed)</option>
                 </select>
-
                 <div class="modal-actions">
                     <button type="button" class="modal-btn-cancel" onclick="closeBlacklistModal()">Cancel</button>
                     <button type="submit" class="modal-btn-confirm">Blacklist</button>
@@ -425,6 +425,10 @@ function isPlateBlacklisted($conn, $plate) {
     }
     function closeBlacklistModal() {
         document.getElementById('blacklistModal').classList.remove('active');
+    }
+    function toggleTheme() {
+        var isDark = document.documentElement.classList.toggle('dark-mode');
+        try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e) {}
     }
     </script>
 </body>

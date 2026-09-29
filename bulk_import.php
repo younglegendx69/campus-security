@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
-if ($_SESSION['role'] != 'admin') { header("Location: dashboard.php"); exit; }
+if ($_SESSION['role'] != 'admin') { header("Location: guard_dashboard.php"); exit; }
 include 'db.php';
 
 $success = "";
@@ -43,14 +43,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
                 $full_name = trim($row[0]);
                 $department = isset($row[1]) ? trim($row[1]) : "";
                 $phone = isset($row[2]) ? trim($row[2]) : "";
-
                 $plate1 = isset($row[3]) ? strtoupper(trim($row[3])) : "";
                 $model1 = isset($row[4]) ? trim($row[4]) : "";
                 $color1 = isset($row[5]) ? trim($row[5]) : "";
-
-                $plate2 = isset($row[6]) ? strtoupper(trim($row[6])) : "";
-                $model2 = isset($row[7]) ? trim($row[7]) : "";
-                $color2 = isset($row[8]) ? trim($row[8]) : "";
 
                 $chk = $conn->prepare("SELECT id FROM students WHERE full_name = ? AND phone = ?");
                 $chk->bind_param("ss", $full_name, $phone);
@@ -62,16 +57,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
                 }
 
                 $plate_error = false;
-                foreach ([$plate1, $plate2] as $p) {
-                    if (empty($p)) continue;
+                if (!empty($plate1)) {
                     $chk2 = $conn->prepare("SELECT id FROM cars WHERE plate_number = ?");
-                    $chk2->bind_param("s", $p);
+                    $chk2->bind_param("s", $plate1);
                     $chk2->execute();
                     if ($chk2->get_result()->num_rows > 0) {
                         $skipped++;
-                        $report[] = "Row $row_num: skipped (duplicate plate: $p)";
+                        $report[] = "Row $row_num: skipped (duplicate plate: $plate1)";
                         $plate_error = true;
-                        break;
                     }
                 }
                 if ($plate_error) continue;
@@ -83,24 +76,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
 
                 if ($stmt->execute()) {
                     $new_id = $conn->insert_id;
-                    $cars_added = 0;
-
                     if (!empty($plate1)) {
                         $stmt2 = $conn->prepare("INSERT INTO cars (student_id, plate_number, car_model, color) VALUES (?, ?, ?, ?)");
                         $stmt2->bind_param("isss", $new_id, $plate1, $model1, $color1);
                         $stmt2->execute();
-                        $cars_added++;
                     }
-
-                    if (!empty($plate2)) {
-                        $stmt2 = $conn->prepare("INSERT INTO cars (student_id, plate_number, car_model, color) VALUES (?, ?, ?, ?)");
-                        $stmt2->bind_param("isss", $new_id, $plate2, $model2, $color2);
-                        $stmt2->execute();
-                        $cars_added++;
-                    }
-
                     $imported++;
-                    $report[] = "Row $row_num: OK - $full_name ($student_id) with $cars_added car(s)";
+                    $report[] = "Row $row_num: OK - $full_name ($student_id)";
                 } else {
                     $skipped++;
                     $report[] = "Row $row_num: error inserting $full_name";
@@ -122,15 +104,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
 <head>
     <title>Bulk Import - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
-        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: #fff; border-right: 1px solid #e2e8f0; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px 18px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; }
         .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; }
         .sidebar-header .name { font-size: 13px; font-weight: 700; line-height: 1.3; }
         .sidebar-header .name span { display: block; font-weight: 400; color: #64748b; font-size: 10.5px; }
-        .sidebar nav { padding: 16px 12px; }
+        .sidebar nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
         .nav-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; padding: 12px 12px 8px; }
         .sidebar nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #475569; text-decoration: none; font-size: 13.5px; font-weight: 500; border-radius: 8px; margin-bottom: 2px; }
         .sidebar nav a:hover { background: #f1f5f9; color: #0f172a; }
@@ -156,12 +139,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
         .report li { font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-family: monospace; }
         .btn-download { display: inline-block; background: #2563eb; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; margin-top: 10px; cursor: pointer; }
     </style>
+    <script>
+    (function() {
+        try {
+            var saved = localStorage.getItem('theme') || 'light';
+            if (saved === 'dark') document.documentElement.classList.add('dark-mode');
+        } catch(e) {}
+    })();
+    </script>
 </head>
 <body>
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="logo.png" alt="Logo">
             <div class="name">Sardam Institute<span>Computer Sciences</span></div>
+        </div>
+        <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Theme</span>
+            <button onclick="toggleTheme()" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
         </div>
         <nav>
             <div class="nav-label">Main</div>
@@ -174,6 +171,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
+            <div class="nav-label">Account</div>
+            <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
+            <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Change Password</a>
+            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sign Out</a>
         </nav>
     </aside>
     <main class="main">
@@ -187,14 +188,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
             <h3>CSV File Format</h3>
             <div class="instructions">
                 CSV columns in this exact order:<br>
-                <code>full_name,department,phone,plate1,model1,color1,plate2,model2,color2</code>
-                The last 3 columns (plate2, model2, color2) are OPTIONAL for a second car.
-                <br>
-                <strong>Example (student with 1 car):</strong>
-                <code>Ahmed Ali,Computer Science,07701234567,12345 ABC,Toyota Corolla,White,,,</code>
-                <strong>Example (student with 2 cars):</strong>
-                <code>Sara Ahmed,IT,07701111111,55555 XYZ,Honda Civic,Red,77777 DEF,Nissan Patrol,Black</code>
-                <br>
+                <code>full_name,department,phone,plate_number,car_model,color</code>
+                <strong>Example:</strong>
+                <code>Ahmed Ali,Computer Science,07701234567,22 C 79770,Toyota Corolla,White</code>
+                <code>Sara Ahmed,IT,07701111111,11 B 12345,Honda Civic,Red</code>
                 - First row = header (skipped)<br>
                 - Student IDs are auto-generated<br>
                 - Duplicates will be skipped
@@ -225,13 +222,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
 
     <script>
     function downloadTemplate() {
-        const csv = "full_name,department,phone,plate1,model1,color1,plate2,model2,color2\nAhmed Ali,Computer Science,07701234567,12345 ABC,Toyota Corolla,White,,,\nSara Ahmed,IT,07701111111,55555 XYZ,Honda Civic,Red,77777 DEF,Nissan Patrol,Black\n";
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        var csv = "full_name,department,phone,plate_number,car_model,color\nAhmed Ali,Computer Science,07701234567,22 C 79770,Toyota Corolla,White\nSara Ahmed,IT,07701111111,11 B 12345,Honda Civic,Red\n";
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = url;
         a.download = 'student_template.csv';
         a.click();
+    }
+    function toggleTheme() {
+        var isDark = document.documentElement.classList.toggle('dark-mode');
+        try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e) {}
     }
     </script>
 </body>
