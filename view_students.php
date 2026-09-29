@@ -1,6 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
+if ($_SESSION['role'] != 'admin') { header("Location: guard_dashboard.php"); exit; }
 include 'db.php';
 
 $search = "";
@@ -51,7 +52,9 @@ $students = $conn->query("
         td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #f8fafc; }
-        .avatar-sm { width: 36px; height: 36px; border-radius: 50%; background: #0f172a; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; vertical-align: middle; margin-right: 10px; }
+        .avatar-sm { width: 36px; height: 36px; border-radius: 50%; background: #0f172a; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; vertical-align: middle; margin-right: 10px; flex-shrink: 0; }
+        .student-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; }
+        .student-link:hover strong { color: #2563eb; text-decoration: underline; }
         .student-id { font-family: monospace; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
         .car-badge { display: inline-block; background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
         .no-cars { color: #94a3b8; font-size: 12px; }
@@ -60,6 +63,8 @@ $students = $conn->query("
         .btn-edit:hover { background: #dbeafe; }
         .btn-del { color: #dc2626; text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 10px; border: 1px solid #fee2e2; border-radius: 6px; background: #fef2f2; }
         .btn-del:hover { background: #fee2e2; }
+        .btn-view { color: #059669; text-decoration: none; font-size: 13px; font-weight: 500; padding: 5px 10px; border: 1px solid #d1fae5; border-radius: 6px; background: #ecfdf5; }
+        .btn-view:hover { background: #d1fae5; }
         .empty { text-align: center; padding: 60px; color: #64748b; }
     </style>
 </head>
@@ -74,10 +79,11 @@ $students = $conn->query("
             <a href="dashboard.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
             <div class="nav-label">Management</div>
             <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
+            <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
             <a href="view_students.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
+            <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
             <div class="nav-label">Operations</div>
-            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search Plate</a>
-            <a href="view_logs.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg> Entry Logs</a>
+            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
         </nav>
     </aside>
@@ -109,8 +115,10 @@ $students = $conn->query("
                         <?php while ($s = $students->fetch_assoc()): ?>
                             <tr>
                                 <td>
-                                    <span class="avatar-sm"><?php echo strtoupper(substr($s['full_name'], 0, 1)); ?></span>
-                                    <strong><?php echo htmlspecialchars($s['full_name']); ?></strong>
+                                    <a href="student_profile.php?id=<?php echo $s['id']; ?>" class="student-link">
+                                        <span class="avatar-sm"><?php echo strtoupper(substr($s['full_name'], 0, 1)); ?></span>
+                                        <strong><?php echo htmlspecialchars($s['full_name']); ?></strong>
+                                    </a>
                                 </td>
                                 <td><span class="student-id"><?php echo htmlspecialchars($s['student_id']); ?></span></td>
                                 <td><?php echo htmlspecialchars($s['department'] ?: '—'); ?></td>
@@ -123,6 +131,7 @@ $students = $conn->query("
                                 </td>
                                 <td>
                                     <div class="actions">
+                                        <a href="student_profile.php?id=<?php echo $s['id']; ?>" class="btn-view">View</a>
                                         <a href="edit_student.php?id=<?php echo $s['id']; ?>" class="btn-edit">Edit</a>
                                         <a href="delete_student.php?id=<?php echo $s['id']; ?>" class="btn-del" onclick="return confirm('Delete <?php echo htmlspecialchars($s['full_name']); ?>?')">Delete</a>
                                     </div>

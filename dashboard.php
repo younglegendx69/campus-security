@@ -53,8 +53,9 @@ include 'db.php';
         .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
         .card p { font-size: 12.5px; color: #64748b; line-height: 1.5; }
         svg { stroke-linecap: round; stroke-linejoin: round; }
-        .ic-dark { stroke: #0f172a; } .ic-blue { stroke: #2563eb; } .ic-green { stroke: #16a34a; }
-        .ic-purple { stroke: #7c3aed; } .ic-orange { stroke: #ea580c; } .ic-red { stroke: #dc2626; } .ic-cyan { stroke: #0891b2; }
+        .ic-blue { stroke: #2563eb; } .ic-green { stroke: #16a34a; }
+        .ic-purple { stroke: #7c3aed; } .ic-orange { stroke: #ea580c; }
+        .ic-red { stroke: #dc2626; } .ic-cyan { stroke: #0891b2; }
         @media (max-width: 1100px) { .stats { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
@@ -67,32 +68,16 @@ include 'db.php';
         </div>
         <nav>
             <div class="nav-label">Main</div>
-            <a href="dashboard.php" class="active">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
-                Dashboard
-            </a>
+            <a href="dashboard.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
             <div class="nav-label">Management</div>
-            <a href="add_student.php">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg>
-                Add Student
-            </a>
-            <a href="view_students.php">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-                All Students
-            </a>
+            <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
+            <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
+            <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
+            <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
             <div class="nav-label">Operations</div>
-            <a href="search_plate.php">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-                Search Plate
-            </a>
-            <a href="view_logs.php">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
-                Entry Logs
-            </a>
-            <a href="blacklist.php">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>
-                Blacklist
-            </a>
+            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
+            <a href="view_logs.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg> Entry Logs</a>
+            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
         </nav>
     </aside>
 
@@ -152,20 +137,25 @@ include 'db.php';
                     <h3>Add Student</h3>
                     <p>Register a new student with their car</p>
                 </a>
+                <a href="bulk_import.php" class="card">
+                    <div class="icon-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="ic-cyan" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
+                    <h3>Bulk Import</h3>
+                    <p>Add many students from a CSV file</p>
+                </a>
                 <a href="search_plate.php" class="card">
                     <div class="icon-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="ic-purple" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></div>
-                    <h3>Search Plate</h3>
-                    <p>Identify a student from a car plate</p>
-                </a>
-                <a href="view_logs.php" class="card">
-                    <div class="icon-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="ic-orange" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div>
-                    <h3>Entry Logs</h3>
-                    <p>Review all entry and exit records</p>
+                    <h3>Search</h3>
+                    <p>Identify a student by plate or name</p>
                 </a>
                 <a href="view_students.php" class="card">
                     <div class="icon-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="ic-cyan" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
                     <h3>All Students</h3>
                     <p>Browse and manage the student list</p>
+                </a>
+                <a href="bulk_delete.php" class="card">
+                    <div class="icon-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="ic-red" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></div>
+                    <h3>Bulk Delete</h3>
+                    <p>Remove graduated students in bulk</p>
                 </a>
                 <a href="blacklist.php" class="card">
                     <div class="icon-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="ic-red" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg></div>
