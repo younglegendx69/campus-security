@@ -18,14 +18,13 @@ $counts = [];
 for ($i = 1; $i <= 5; $i++) $counts[$i] = countByStage($conn, $i);
 $total = array_sum($counts);
 
-// Fetch Stage 3 students (they need a field before moving to Stage 4)
+// Fetch Stage 3 students (they need a field before Stage 4)
 $stage3_students = [];
 if ($counts[3] > 0) {
     $res = $conn->query("SELECT id, full_name, student_id, class FROM students WHERE stage = 3 ORDER BY class ASC, full_name ASC");
     while ($row = $res->fetch_assoc()) $stage3_students[] = $row;
 }
 
-// Handle promotion
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
     if ($total == 0) {
         $error = "No students to promote.";
@@ -38,19 +37,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
         }
 
         if ($missing > 0) {
-            $error = "Please choose a Field for every Stage 3 student. Still missing: $missing";
+            $error = "Please choose a Field for every Stage 3 student. Missing: $missing";
         } else {
             $conn->begin_transaction();
             try {
-                // ============ CORRECT ORDER (bottom-up) ============
-
-                // 1. Delete Stage 5 (graduates leave first)
+                // Step 1: Delete Stage 5 (graduates)
                 $conn->query("DELETE FROM students WHERE stage = 5");
 
-                // 2. Stage 4 -> Stage 5 (keep their field)
+                // Step 2: Stage 4 -> Stage 5 (keep field)
                 $conn->query("UPDATE students SET stage = 5 WHERE stage = 4");
 
-                // 3. Stage 3 -> Stage 4 (with individual field)
+                // Step 3: Stage 3 -> Stage 4 (with chosen field)
                 $upd = $conn->prepare("UPDATE students SET stage = 4, track = ? WHERE id = ?");
                 foreach ($stage3_students as $s) {
                     $field = $fields[$s['id']];
@@ -58,16 +55,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
                     $upd->execute();
                 }
 
-                // 4. Stage 2 -> Stage 3 (clear track)
+                // Step 4: Stage 2 -> Stage 3 (clear track)
                 $conn->query("UPDATE students SET stage = 3, track = NULL WHERE stage = 2");
 
-                // 5. Stage 1 -> Stage 2 (clear track)
+                // Step 5: Stage 1 -> Stage 2 (clear track)
                 $conn->query("UPDATE students SET stage = 2, track = NULL WHERE stage = 1");
 
-                // ====================================================
-
                 $conn->commit();
-                $success = "Promotion complete! All students advanced one stage. Stage 5 graduates removed.";
+                $success = "Promotion complete! Every student moved up one stage. Stage 5 graduates were deleted.";
 
                 for ($i = 1; $i <= 5; $i++) $counts[$i] = countByStage($conn, $i);
                 $total = array_sum($counts);
@@ -171,50 +166,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
         }
         .helper-bar button:hover { background: #e2e8f0; color: #0f172a; }
 
-        .btn { background: #dc2626; color: #fff; padding: 15px 32px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; max-width: 1000px; width: 100%; }
-        .btn:hover { background: #b91c1c; }
-        .btn-green { background: #16a34a; }
-        .btn-green:hover { background: #15803d; }
+        .btn { background: #16a34a; color: #fff; padding: 15px 32px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; max-width: 1000px; width: 100%; }
+        .btn:hover { background: #15803d; }
 
         .alert { padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
         .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
         .empty { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
-        .empty-success { text-align: center; padding: 60px 20px; color: #166534; font-size: 15px; }
+        .empty-success { text-align: center; padding: 60px 20px; color: #166534; font-size: 15px; line-height: 1.8; }
 
-        /* ====== DARK MODE FIXES ====== */
+        /* Dark mode fixes */
         html.dark-mode .field-item { border-bottom-color: #334155; }
         html.dark-mode .field-item .num { color: #94a3b8; }
         html.dark-mode .field-item .name { color: #e2e8f0; }
-        html.dark-mode .field-item .sid {
-            background: #334155 !important;
-            color: #ffffff !important;
-        }
-        html.dark-mode .field-item .cl {
-            background: #78350f;
-            color: #fde68a;
-        }
-        html.dark-mode .field-item select {
-            background: #0f172a;
-            border-color: #475569;
-            color: #ffffff;
-        }
-        html.dark-mode .helper-bar button {
-            background: #334155;
-            border-color: #475569;
-            color: #e2e8f0;
-        }
-        html.dark-mode .helper-bar button:hover {
-            background: #475569;
-            color: #ffffff;
-        }
+        html.dark-mode .field-item .sid { background: #334155 !important; color: #ffffff !important; }
+        html.dark-mode .field-item .cl { background: #78350f; color: #fde68a; }
+        html.dark-mode .field-item select { background: #0f172a; border-color: #475569; color: #ffffff; }
+        html.dark-mode .helper-bar button { background: #334155; border-color: #475569; color: #e2e8f0; }
+        html.dark-mode .helper-bar button:hover { background: #475569; color: #ffffff; }
         html.dark-mode .promo-list li { border-bottom-color: #334155; }
         html.dark-mode .total-row { border-top-color: #334155; }
-        html.dark-mode .warning-box {
-            background: #78350f !important;
-            color: #fde68a !important;
-            border-color: #92400e !important;
-        }
+        html.dark-mode .warning-box { background: #78350f !important; color: #fde68a !important; border-color: #92400e !important; }
         html.dark-mode .warning-box strong { color: #fcd34d !important; }
         html.dark-mode .empty-success { color: #86efac !important; }
     </style>
@@ -259,12 +231,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
     </aside>
     <main class="main">
         <h1 class="page-title">Promote Students</h1>
-        <p class="page-sub">Advance all students one stage at the end of the year</p>
+        <p class="page-sub">Advance every student exactly one stage. Stage 5 students graduate (deleted).</p>
 
         <?php if (!$success): ?>
         <div class="warning-box">
-            ⚠️ <strong>Warning:</strong> This action cannot be undone. All students move up one stage.
-            Stage 5 students will be <strong>removed</strong> (graduated).
+            ⚠️ <strong>Warning:</strong> This cannot be undone. Every student moves up <strong>exactly one stage</strong>:
+            <br>• Stage 1 → 2
+            <br>• Stage 2 → 3
+            <br>• Stage 3 → 4 (assign Field below)
+            <br>• Stage 4 → 5 (keep Field)
+            <br>• Stage 5 → <strong>Deleted (Graduated)</strong>
             <br><br>
             <strong>Backup first!</strong> phpMyAdmin → campus_security → Export → Go.
         </div>
@@ -275,9 +251,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
             <div class="card" style="text-align: center;">
                 <div class="empty-success">
                     ✅ <strong>Promotion Complete!</strong><br><br>
-                    All students advanced exactly ONE stage.<br>
-                    Stage 5 graduates were removed.<br><br>
-                    <a href="promote.php" style="color: #2563eb;">Refresh page</a>
+                    Every student moved up exactly ONE stage.<br>
+                    Stage 5 graduates were deleted.<br><br>
+                    <a href="promote.php" style="color: #2563eb;">Promote again</a>
                 </div>
             </div>
         <?php endif; ?>
@@ -290,7 +266,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
             <ul class="promo-list">
                 <li><span class="label promo-from">Stage 1</span><span><strong><?php echo $counts[1]; ?></strong> students</span><span class="promo-to">→ Stage 2</span></li>
                 <li><span class="label promo-from">Stage 2</span><span><strong><?php echo $counts[2]; ?></strong> students</span><span class="promo-to">→ Stage 3</span></li>
-                <li><span class="label promo-from">Stage 3</span><span><strong><?php echo $counts[3]; ?></strong> students</span><span class="promo-to">→ Stage 4 (with Field)</span></li>
+                <li><span class="label promo-from">Stage 3</span><span><strong><?php echo $counts[3]; ?></strong> students</span><span class="promo-to">→ Stage 4 (assign Field below)</span></li>
                 <li><span class="label promo-from">Stage 4</span><span><strong><?php echo $counts[4]; ?></strong> students</span><span class="promo-to">→ Stage 5 (keep Field)</span></li>
                 <li><span class="label promo-from">Stage 5</span><span><strong><?php echo $counts[5]; ?></strong> students</span><span class="promo-delete">→ Graduate (Delete)</span></li>
             </ul>
@@ -329,13 +305,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
                 </div>
             </div>
 
-            <button type="submit" name="confirm_promote" class="btn btn-green">
+            <button type="submit" name="confirm_promote" class="btn">
                 ✅ Confirm Promotion — Advance All Students
             </button>
         </form>
         <?php elseif (!$success && $total > 0): ?>
             <form method="POST" onsubmit="return confirmPromote()">
-                <button type="submit" name="confirm_promote" class="btn btn-green">
+                <button type="submit" name="confirm_promote" class="btn">
                     ✅ Confirm Promotion — Advance All Students
                 </button>
             </form>
@@ -358,7 +334,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
             alert('Please choose a Field for every Stage 3 student. Missing: ' + missing);
             return false;
         }
-        return confirm('Are you SURE?\n\nEvery student will advance ONE stage.\nStage 5 students will be DELETED (graduated).\nThis cannot be undone.');
+        return confirm('Are you SURE?\n\nEvery student moves up ONE stage.\nStage 5 students will be DELETED (graduated).\nThis cannot be undone.');
     }
     function toggleTheme() {
         var isDark = document.documentElement.classList.toggle('dark-mode');
