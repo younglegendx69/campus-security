@@ -443,10 +443,10 @@ CREATE TABLE `pma__table_uiprefs` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `pma__tracking`
+-- Table structure for table `pma__Fielding`
 --
 
-CREATE TABLE `pma__tracking` (
+CREATE TABLE `pma__Fielding` (
   `db_name` varchar(64) NOT NULL,
   `table_name` varchar(64) NOT NULL,
   `version` int(10) UNSIGNED NOT NULL,
@@ -455,9 +455,9 @@ CREATE TABLE `pma__tracking` (
   `schema_snapshot` text NOT NULL,
   `schema_sql` text DEFAULT NULL,
   `data_sql` longtext DEFAULT NULL,
-  `tracking` set('UPDATE','REPLACE','INSERT','DELETE','TRUNCATE','CREATE DATABASE','ALTER DATABASE','DROP DATABASE','CREATE TABLE','ALTER TABLE','RENAME TABLE','DROP TABLE','CREATE INDEX','DROP INDEX','CREATE VIEW','ALTER VIEW','DROP VIEW') DEFAULT NULL,
-  `tracking_active` int(1) UNSIGNED NOT NULL DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Database changes tracking for phpMyAdmin';
+  `Fielding` set('UPDATE','REPLACE','INSERT','DELETE','TRUNCATE','CREATE DATABASE','ALTER DATABASE','DROP DATABASE','CREATE TABLE','ALTER TABLE','RENAME TABLE','DROP TABLE','CREATE INDEX','DROP INDEX','CREATE VIEW','ALTER VIEW','DROP VIEW') DEFAULT NULL,
+  `Fielding_active` int(1) UNSIGNED NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Database changes Fielding for phpMyAdmin';
 
 -- --------------------------------------------------------
 
@@ -602,9 +602,9 @@ ALTER TABLE `pma__table_uiprefs`
   ADD PRIMARY KEY (`username`,`db_name`,`table_name`);
 
 --
--- Indexes for table `pma__tracking`
+-- Indexes for table `pma__Fielding`
 --
-ALTER TABLE `pma__tracking`
+ALTER TABLE `pma__Fielding`
   ADD PRIMARY KEY (`db_name`,`table_name`,`version`);
 
 --

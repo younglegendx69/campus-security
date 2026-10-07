@@ -16,11 +16,19 @@ $student_id = intval($_GET['id']);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $full_name = trim($_POST['full_name']);
-    $department = trim($_POST['department']);
+    $stage = intval($_POST['stage'] ?? 0);
+    $class = strtoupper(trim($_POST['class'] ?? ''));
+    $track = trim($_POST['track'] ?? '');
     $phone = trim($_POST['phone']);
 
     if (empty($full_name)) {
         $error = "Full Name is required.";
+    } elseif ($stage < 1 || $stage > 5) {
+        $error = "Please select a valid stage (1-5).";
+    } elseif (!in_array($class, ['A', 'B', 'C', 'D'])) {
+        $error = "Please select a class (A, B, C, or D).";
+    } elseif (($stage == 4 || $stage == 5) && empty($track)) {
+        $error = "Please select a field (Programming or Network) for Stage $stage.";
     } else {
         $photo_sql = "";
         if (!empty($_FILES['photo']['name'])) {
@@ -30,8 +38,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $photo_sql = ", photo = '$photo'";
         }
 
-        $stmt = $conn->prepare("UPDATE students SET full_name = ?, department = ?, phone = ? $photo_sql WHERE id = ?");
-        $stmt->bind_param("sssi", $full_name, $department, $phone, $student_id);
+        // If stage 1-3, clear the field
+        if ($stage != 4 && $stage != 5) {
+            $track = '';
+        }
+
+        $stmt = $conn->prepare("UPDATE students SET full_name = ?, stage = ?, class = ?, track = ?, phone = ? $photo_sql WHERE id = ?");
+        $stmt->bind_param("sisssi", $full_name, $stage, $class, $track, $phone, $student_id);
         $stmt->execute();
 
         $existing_ids = $_POST['existing_car_id'] ?? [];
@@ -152,8 +165,8 @@ while ($c = $cars_res->fetch_assoc()) $cars[] = $c;
         .section-head { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
         .form-group { margin-bottom: 18px; }
         label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #334155; }
-        input[type=text], input[type=file] { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; }
-        input:focus { outline: none; border-color: #0f172a; }
+        input[type=text], input[type=file], select { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+        input:focus, select:focus { outline: none; border-color: #0f172a; }
         input[readonly] { background: #f1f5f9; color: #64748b; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
@@ -200,6 +213,7 @@ while ($c = $cars_res->fetch_assoc()) $cars[] = $c;
             <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
             <a href="view_students.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
             <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
+<a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
@@ -229,8 +243,32 @@ while ($c = $cars_res->fetch_assoc()) $cars[] = $c;
                 </div>
                 <div class="row">
                     <div class="form-group">
-                        <label>Department</label>
-                        <input type="text" name="department" value="<?php echo htmlspecialchars($student['department']); ?>">
+                        <label>Stage *</label>
+                        <select name="stage" id="stageSelect" required onchange="toggleTrack()">
+                            <option value="">-- Select Stage --</option>
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <option value="<?php echo $i; ?>" <?php if ($student['stage'] == $i) echo 'selected'; ?>>Stage <?php echo $i; ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Class *</label>
+                        <select name="class" required>
+                            <option value="">-- Select Class --</option>
+                            <?php foreach (['A', 'B', 'C', 'D'] as $cl): ?>
+                                <option value="<?php echo $cl; ?>" <?php if ($student['class'] == $cl) echo 'selected'; ?>>Class <?php echo $cl; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group" id="trackGroup" style="<?php echo ($student['stage'] == 4 || $student['stage'] == 5) ? '' : 'display:none;'; ?>">
+                        <label>Field *</label>
+                        <select name="track" id="trackSelect">
+                            <option value="">-- Select Field --</option>
+                            <option value="Programming" <?php if ($student['track'] == 'Programming') echo 'selected'; ?>>Programming</option>
+                            <option value="Network" <?php if ($student['track'] == 'Network') echo 'selected'; ?>>Network</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Phone</label>
@@ -313,6 +351,20 @@ while ($c = $cars_res->fetch_assoc()) $cars[] = $c;
             </div>
         `;
         container.appendChild(div);
+    }
+    function toggleTrack() {
+        const stage = document.getElementById('stageSelect').value;
+        const trackGroup = document.getElementById('trackGroup');
+        const trackSelect = document.getElementById('trackSelect');
+
+        if (stage === '4' || stage === '5') {
+            trackGroup.style.display = 'block';
+            trackSelect.required = true;
+        } else {
+            trackGroup.style.display = 'none';
+            trackSelect.required = false;
+            trackSelect.value = '';
+        }
     }
     function toggleTheme() {
         var isDark = document.documentElement.classList.toggle('dark-mode');

@@ -17,7 +17,7 @@ if (!empty($_GET['q'])) {
 
 if ($where) {
     $stmt = $conn->prepare("
-        SELECT s.id, s.student_id, s.full_name, s.department, s.phone, s.photo,
+        SELECT s.id, s.student_id, s.full_name, s.stage, s.class, s.track, s.phone, s.photo,
                GROUP_CONCAT(c.plate_number SEPARATOR ', ') AS plates,
                COUNT(c.id) AS car_count
         FROM students s
@@ -32,7 +32,7 @@ if ($where) {
     $students = $stmt->get_result();
 } else {
     $students = $conn->query("
-        SELECT s.id, s.student_id, s.full_name, s.department, s.phone, s.photo,
+        SELECT s.id, s.student_id, s.full_name, s.stage, s.class, s.track, s.phone, s.photo,
                GROUP_CONCAT(c.plate_number SEPARATOR ', ') AS plates,
                COUNT(c.id) AS car_count
         FROM students s
@@ -83,12 +83,19 @@ $total = $students->num_rows;
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #f8fafc; }
         .avatar-sm { width: 36px; height: 36px; border-radius: 50%; background: #0f172a; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; vertical-align: middle; margin-right: 10px; }
+        .student-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; }
+        .student-link:hover .student-name { color: #2563eb; text-decoration: underline; }
         .student-name { font-weight: 600; color: #0f172a; }
         .student-id { font-family: monospace; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+        .stage-badge { display: inline-block; background: #f1f5f9; color: #0f172a; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .class-badge { display: inline-block; background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .track-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .track-programming { background: #dbeafe; color: #1e40af; }
+        .track-networking { background: #dcfce7; color: #166534; }
+        .track-network { background: #dcfce7; color: #166534; }
         .plate-tag { display: inline-block; font-family: monospace; background: #0f172a; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11.5px; letter-spacing: 1px; margin-right: 4px; margin-bottom: 3px; }
         .plate-blocked { background: #dc2626; }
         .no-cars { color: #94a3b8; font-size: 12.5px; font-style: italic; }
-        .dept { color: #475569; font-size: 13.5px; }
         .empty { text-align: center; padding: 60px; color: #64748b; }
         .empty h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
         .empty p { font-size: 13.5px; color: #94a3b8; }
@@ -117,19 +124,17 @@ $total = $students->num_rows;
         <nav>
             <div class="nav-label">Main</div>
             <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
-
             <?php if ($is_admin): ?>
                 <div class="nav-label">Management</div>
                 <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
                 <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
                 <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
                 <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
+                <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
             <?php endif; ?>
-
             <div class="nav-label">Operations</div>
             <a href="search_plate.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
-
             <?php if ($is_admin): ?>
                 <div class="nav-label">Account</div>
                 <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
@@ -173,7 +178,9 @@ $total = $students->num_rows;
                         <tr>
                             <th>Student</th>
                             <th>Student ID</th>
-                            <th>Department</th>
+                            <th>Stage</th>
+                            <th>Class</th>
+                            <th>Field</th>
                             <th>Plate Numbers</th>
                             <th>Cars</th>
                         </tr>
@@ -182,11 +189,21 @@ $total = $students->num_rows;
                         <?php while ($s = $students->fetch_assoc()): ?>
                             <tr>
                                 <td>
-                                    <span class="avatar-sm"><?php echo strtoupper(substr($s['full_name'], 0, 1)); ?></span>
-                                    <span class="student-name"><?php echo htmlspecialchars($s['full_name']); ?></span>
+                                    <a href="student_profile.php?id=<?php echo $s['id']; ?>" class="student-link">
+                                        <span class="avatar-sm"><?php echo strtoupper(substr($s['full_name'], 0, 1)); ?></span>
+                                        <span class="student-name"><?php echo htmlspecialchars($s['full_name']); ?></span>
+                                    </a>
                                 </td>
                                 <td><span class="student-id"><?php echo htmlspecialchars($s['student_id']); ?></span></td>
-                                <td class="dept"><?php echo htmlspecialchars($s['department'] ?: '—'); ?></td>
+                                <td><span class="stage-badge">Stage <?php echo intval($s['stage']); ?></span></td>
+                                <td><span class="class-badge">Class <?php echo htmlspecialchars($s['class']); ?></span></td>
+                                <td>
+                                    <?php if (($s['stage'] == 4 || $s['stage'] == 5) && $s['track']): ?>
+                                        <span class="track-badge track-<?php echo strtolower($s['track']); ?>"><?php echo htmlspecialchars($s['track']); ?></span>
+                                    <?php else: ?>
+                                        <span style="color: #94a3b8;">—</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if ($s['plates']): 
                                         $plates = explode(', ', $s['plates']);
@@ -215,7 +232,6 @@ $total = $students->num_rows;
             </div>
         <?php endif; ?>
     </main>
-
     <script>
     function toggleTheme() {
         var isDark = document.documentElement.classList.toggle('dark-mode');

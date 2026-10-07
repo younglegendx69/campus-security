@@ -30,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
             $imported = 0;
             $skipped = 0;
             $row_num = 0;
-            fgetcsv($handle);
+            fgetcsv($handle); // Skip header
 
             while (($row = fgetcsv($handle)) !== false) {
                 $row_num++;
@@ -40,13 +40,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
                     continue;
                 }
 
+                // Columns: full_name, stage, class, track, phone, plate_number, car_model, color
                 $full_name = trim($row[0]);
-                $department = isset($row[1]) ? trim($row[1]) : "";
-                $phone = isset($row[2]) ? trim($row[2]) : "";
-                $plate1 = isset($row[3]) ? strtoupper(trim($row[3])) : "";
-                $model1 = isset($row[4]) ? trim($row[4]) : "";
-                $color1 = isset($row[5]) ? trim($row[5]) : "";
+                $stage = intval(trim($row[1] ?? 0));
+                $class = strtoupper(trim($row[2] ?? ''));
+                $track = trim($row[3] ?? '');
+                $phone = trim($row[4] ?? '');
+                $plate1 = isset($row[5]) ? strtoupper(trim($row[5])) : "";
+                $model1 = trim($row[6] ?? '');
+                $color1 = trim($row[7] ?? '');
 
+                // Normalize track (accept Network or Networking)
+                if ($track == 'Networking') $track = 'Network';
+
+                // Validate
+                if ($stage < 1 || $stage > 5) {
+                    $skipped++;
+                    $report[] = "Row $row_num: skipped (invalid stage: $stage)";
+                    continue;
+                }
+                if (!in_array($class, ['A', 'B', 'C', 'D'])) {
+                    $skipped++;
+                    $report[] = "Row $row_num: skipped (invalid class: $class)";
+                    continue;
+                }
+                if (($stage == 4 || $stage == 5) && !in_array($track, ['Programming', 'Network'])) {
+                    $skipped++;
+                    $report[] = "Row $row_num: skipped (missing/invalid field for Stage $stage)";
+                    continue;
+                }
+                if ($stage != 4 && $stage != 5) {
+                    $track = '';
+                }
+
+                // Duplicate name + phone
                 $chk = $conn->prepare("SELECT id FROM students WHERE full_name = ? AND phone = ?");
                 $chk->bind_param("ss", $full_name, $phone);
                 $chk->execute();
@@ -56,6 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
                     continue;
                 }
 
+                // Duplicate plate
                 $plate_error = false;
                 if (!empty($plate1)) {
                     $chk2 = $conn->prepare("SELECT id FROM cars WHERE plate_number = ?");
@@ -71,8 +99,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
 
                 $student_id = generateStudentID($conn);
 
-                $stmt = $conn->prepare("INSERT INTO students (student_id, full_name, department, phone) VALUES (?, ?, ?, ?)");
-                $stmt->bind_param("ssss", $student_id, $full_name, $department, $phone);
+                if ($stage == 4 || $stage == 5) {
+                    $stmt = $conn->prepare("INSERT INTO students (student_id, full_name, stage, class, track, phone) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->bind_param("ssisss", $student_id, $full_name, $stage, $class, $track, $phone);
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO students (student_id, full_name, stage, class, phone) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->bind_param("ssiss", $student_id, $full_name, $stage, $class, $phone);
+                }
 
                 if ($stmt->execute()) {
                     $new_id = $conn->insert_id;
@@ -82,7 +115,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
                         $stmt2->execute();
                     }
                     $imported++;
-                    $report[] = "Row $row_num: OK - $full_name ($student_id)";
+                    $label = "Stage $stage • Class $class";
+                    if ($track) $label .= " • $track";
+                    $report[] = "Row $row_num: OK - $full_name ($student_id, $label)";
                 } else {
                     $skipped++;
                     $report[] = "Row $row_num: error inserting $full_name";
@@ -135,7 +170,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
         .report { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; max-width: 900px; margin-top: 20px; }
         .report h3 { font-size: 14px; margin-bottom: 12px; }
-        .report ul { list-style: none; padding: 0; }
+        .report ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
         .report li { font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-family: monospace; }
         .btn-download { display: inline-block; background: #2563eb; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; margin-top: 10px; cursor: pointer; }
     </style>
@@ -168,6 +203,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
             <a href="bulk_import.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
             <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
             <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
+            <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
@@ -188,10 +224,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
             <h3>CSV File Format</h3>
             <div class="instructions">
                 CSV columns in this exact order:<br>
-                <code>full_name,department,phone,plate_number,car_model,color</code>
-                <strong>Example:</strong>
-                <code>Ahmed Ali,Computer Science,07701234567,22 C 79770,Toyota Corolla,White</code>
-                <code>Sara Ahmed,IT,07701111111,11 B 12345,Honda Civic,Red</code>
+                <code>full_name,stage,class,track,phone,plate_number,car_model,color</code>
+
+                <strong>Column meanings:</strong>
+                - <strong>stage</strong>: 1, 2, 3, 4, or 5
+                - <strong>class</strong>: A, B, C, or D
+                - <strong>track</strong>: Programming OR Network (ONLY for Stage 4-5; leave empty for Stage 1-3)
+
+                <strong>Examples:</strong>
+                <code>Ahmed Ali,1,A,,07701234567,22 C 79770,Toyota Corolla,White</code>
+                <code>Sara Ahmed,4,B,Programming,07701111111,11 B 12345,Honda Civic,Red</code>
+                <code>Kardo Omar,5,D,Network,07701902222,77 Z 99999,Nissan Patrol,Black</code>
+
                 - First row = header (skipped)<br>
                 - Student IDs are auto-generated<br>
                 - Duplicates will be skipped
@@ -222,12 +266,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file'])) {
 
     <script>
     function downloadTemplate() {
-        var csv = "full_name,department,phone,plate_number,car_model,color\nAhmed Ali,Computer Science,07701234567,22 C 79770,Toyota Corolla,White\nSara Ahmed,IT,07701111111,11 B 12345,Honda Civic,Red\n";
+        var csv = "full_name,stage,class,track,phone,plate_number,car_model,color\n";
+        csv += "Ahmed Ali,1,A,,07701234567,22 C 79770,Toyota Corolla,White\n";
+        csv += "Sara Ahmed,3,B,,07701111111,11 B 12345,Honda Civic,Red\n";
+        csv += "Kardo Omar,4,A,Programming,07701902222,55 C 55555,Nissan Patrol,Black\n";
+        csv += "Lana Rebaz,5,D,Network,07701333333,77 Z 99999,Mazda 6,Silver\n";
         var blob = new Blob([csv], { type: 'text/csv' });
         var url = window.URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
-        a.download = 'student_template.csv';
+        a.download = 'student_import_template.csv';
         a.click();
     }
     function toggleTheme() {

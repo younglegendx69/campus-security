@@ -77,7 +77,7 @@ if (!empty($_GET['q'])) {
     $like = "%$search%";
 
     $stmt = $conn->prepare("
-        SELECT s.id, s.full_name, s.student_id, s.department, s.phone,
+        SELECT s.id, s.full_name, s.student_id, s.stage, s.class, s.track, s.phone,
                (SELECT COUNT(*) FROM cars WHERE student_id = s.id) AS car_count
         FROM students s
         WHERE s.full_name LIKE ? OR s.student_id LIKE ?
@@ -95,7 +95,7 @@ $conn->query("DELETE FROM blacklist WHERE expires_at IS NOT NULL AND expires_at 
 $list = $conn->query("
     SELECT b.id, b.plate_number, b.reason, b.date_added, b.expires_at, b.duration_label,
            u.username AS added_by_username,
-           s.full_name, s.student_id, s.department
+           s.full_name, s.student_id, s.stage, s.class, s.track
     FROM blacklist b
     LEFT JOIN cars c ON b.plate_number = c.plate_number
     LEFT JOIN students s ON c.student_id = s.id
@@ -151,7 +151,12 @@ function isPlateBlacklisted($conn, $plate) {
         .student-avatar { width: 44px; height: 44px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0; }
         .student-name-lg { font-size: 16px; font-weight: 600; }
         .student-id-tag { font-family: monospace; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
-        .student-dept { color: #64748b; font-size: 13px; }
+        .stage-badge { display: inline-block; background: #f1f5f9; color: #0f172a; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .class-badge { display: inline-block; background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .track-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .track-programming { background: #dbeafe; color: #1e40af; }
+        .track-networking { background: #dcfce7; color: #166534; }
+        .track-network { background: #dcfce7; color: #166534; }
         .view-profile-btn { background: #eff6ff; color: #2563eb; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; }
         .car-mini-list { display: grid; gap: 10px; }
         .car-mini { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 10px; gap: 12px; flex-wrap: wrap; }
@@ -216,19 +221,17 @@ function isPlateBlacklisted($conn, $plate) {
         <nav>
             <div class="nav-label">Main</div>
             <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
-
             <?php if ($is_admin): ?>
                 <div class="nav-label">Management</div>
                 <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
                 <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
                 <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
                 <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
+                <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
             <?php endif; ?>
-
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
-
             <?php if ($is_admin): ?>
                 <div class="nav-label">Account</div>
                 <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
@@ -267,10 +270,12 @@ function isPlateBlacklisted($conn, $plate) {
                                 <div class="student-avatar"><?php echo strtoupper(substr($s['full_name'], 0, 1)); ?></div>
                                 <div>
                                     <div class="student-name-lg"><?php echo htmlspecialchars($s['full_name']); ?></div>
-                                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
+                                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
                                         <span class="student-id-tag"><?php echo htmlspecialchars($s['student_id']); ?></span>
-                                        <?php if ($s['department']): ?>
-                                            <span class="student-dept"><?php echo htmlspecialchars($s['department']); ?></span>
+                                        <span class="stage-badge">Stage <?php echo intval($s['stage']); ?></span>
+                                        <span class="class-badge">Class <?php echo htmlspecialchars($s['class']); ?></span>
+                                        <?php if (($s['stage'] == 4 || $s['stage'] == 5) && $s['track']): ?>
+                                            <span class="track-badge track-<?php echo strtolower($s['track']); ?>"><?php echo htmlspecialchars($s['track']); ?></span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -352,7 +357,14 @@ function isPlateBlacklisted($conn, $plate) {
                             <td>
                                 <?php if ($row['full_name']): ?>
                                     <div class="name-cell"><?php echo htmlspecialchars($row['full_name']); ?></div>
-                                    <div class="meta-cell"><?php echo htmlspecialchars($row['student_id']); ?></div>
+                                    <div class="meta-cell">
+                                        <?php echo htmlspecialchars($row['student_id']); ?>
+                                        • Stage <?php echo intval($row['stage']); ?>
+                                        • Class <?php echo htmlspecialchars($row['class']); ?>
+                                        <?php if (($row['stage'] == 4 || $row['stage'] == 5) && $row['track']): ?>
+                                            • <?php echo htmlspecialchars($row['track']); ?>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php else: ?>
                                     <span class="unknown">Not registered</span>
                                 <?php endif; ?>

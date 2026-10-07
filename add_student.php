@@ -20,11 +20,19 @@ $next_id = generateStudentID($conn);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $full_name = trim($_POST['full_name']);
-    $department = trim($_POST['department']);
+    $stage = intval($_POST['stage'] ?? 0);
+    $class = strtoupper(trim($_POST['class'] ?? ''));
+    $track = trim($_POST['track'] ?? '');
     $phone = trim($_POST['phone']);
 
     if (empty($full_name)) {
         $error = "Full Name is required.";
+    } elseif ($stage < 1 || $stage > 5) {
+        $error = "Please select a valid stage (1-5).";
+    } elseif (!in_array($class, ['A', 'B', 'C', 'D'])) {
+        $error = "Please select a class (A, B, C, or D).";
+    } elseif (($stage == 4 || $stage == 5) && empty($track)) {
+        $error = "Please select a field for Stage $stage.";
     } else {
         $chk = $conn->prepare("SELECT id FROM students WHERE full_name = ? AND phone = ?");
         $chk->bind_param("ss", $full_name, $phone);
@@ -45,8 +53,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                     $plate = '';
                     if ($p1 !== '' || $letter !== '' || $p2 !== '') {
-                        if (!preg_match('/^\d{2}$/', $p1) || !preg_match('/^[A-Z]$/', $letter) || !preg_match('/^\d{5}$/', $p2)) {
-                            $error = "Invalid plate format. Use: 2 digits + 1 letter + 5 digits (e.g. 22 C 79770).";
+                        if (!preg_match('/^\d{1,3}$/', $p1) || !preg_match('/^[A-Z]{1,2}$/', $letter) || !preg_match('/^\d{1,6}$/', $p2)) {
+                            $error = "Invalid plate. Use: 1-3 digits + 1-2 letters + 1-6 digits (e.g. 22 C 79770).";
                             break;
                         }
                         $plate = "$p1 $letter $p2";
@@ -78,8 +86,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     move_uploaded_file($_FILES['photo']['tmp_name'], $photo);
                 }
 
-                $stmt = $conn->prepare("INSERT INTO students (student_id, full_name, department, phone, photo) VALUES (?, ?, ?, ?, ?)");
-                $stmt->bind_param("sssss", $student_id, $full_name, $department, $phone, $photo);
+                if ($stage == 4 || $stage == 5) {
+                    $stmt = $conn->prepare("INSERT INTO students (student_id, full_name, stage, class, track, phone, photo) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->bind_param("ssissss", $student_id, $full_name, $stage, $class, $track, $phone, $photo);
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO students (student_id, full_name, stage, class, phone, photo) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->bind_param("ssisss", $student_id, $full_name, $stage, $class, $phone, $photo);
+                }
 
                 if ($stmt->execute()) {
                     $new_student_id = $conn->insert_id;
@@ -92,7 +105,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $cars_added++;
                     }
 
-                    $success = "Student " . htmlspecialchars($student_id) . " (" . htmlspecialchars($full_name) . ") saved with $cars_added car(s)!";
+                    $stage_label = "Stage $stage • Class $class";
+                    if ($track) $stage_label .= " • $track";
+                    $success = "Student " . htmlspecialchars($student_id) . " (" . htmlspecialchars($full_name) . ", $stage_label) saved with $cars_added car(s)!";
                     $next_id = generateStudentID($conn);
                 } else {
                     $error = "Error: " . $conn->error;
@@ -129,8 +144,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .section-head { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
         .form-group { margin-bottom: 18px; }
         label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #334155; }
-        input[type=text], input[type=file] { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; }
-        input:focus { outline: none; border-color: #0f172a; }
+        input[type=text], input[type=file], select { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+        input:focus, select:focus { outline: none; border-color: #0f172a; }
         input[readonly] { background: #f1f5f9; color: #64748b; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .btn { background: #0f172a; color: #fff; padding: 14px 28px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -179,6 +194,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
             <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
             <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
+            <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
@@ -190,7 +206,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </aside>
     <main class="main">
         <h1 class="page-title">Register Student + Cars</h1>
-        <p class="page-sub">Plate format: 2 digits + 1 letter + 5 digits (Iraqi style: 22 C 79770)</p>
+        <p class="page-sub">Every student: Stage + Class. Stage 4-5 also choose Field.</p>
 
         <div class="card">
             <?php if ($success) echo "<div class='alert alert-success'>$success</div>"; ?>
@@ -210,8 +226,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
                 <div class="row">
                     <div class="form-group">
-                        <label>Department</label>
-                        <input type="text" name="department" placeholder="e.g. Computer Science">
+                        <label>Stage *</label>
+                        <select name="stage" id="stageSelect" required onchange="toggleTrack()">
+                            <option value="">-- Select Stage --</option>
+                            <option value="1">Stage 1</option>
+                            <option value="2">Stage 2</option>
+                            <option value="3">Stage 3</option>
+                            <option value="4">Stage 4</option>
+                            <option value="5">Stage 5</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Class *</label>
+                        <select name="class" required>
+                            <option value="">-- Select Class --</option>
+                            <option value="A">Class A</option>
+                            <option value="B">Class B</option>
+                            <option value="C">Class C</option>
+                            <option value="D">Class D</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group" id="trackGroup" style="display:none;">
+                        <label>Field *</label>
+                        <select name="track" id="trackSelect">
+                            <option value="">-- Select Field --</option>
+                            <option value="Programming">Programming</option>
+                            <option value="Network">Network</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Phone</label>
@@ -227,19 +270,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div id="cars-container">
                     <div class="car-box">
                         <div class="car-box-header">Car 1</div>
-                        <label>Plate Number (Iraqi format)</label>
+                        <label>Plate Number</label>
                         <div class="plate-row">
                             <div class="plate-field">
-                                <input type="text" name="plate_p1[]" maxlength="2" placeholder="22" oninput="this.value=this.value.replace(/\D/g,'');">
-                                <div class="hint">2 digits</div>
+                                <input type="text" name="plate_p1[]" maxlength="3" placeholder="22" oninput="this.value=this.value.replace(/\D/g,'');">
+                                <div class="hint">1-3 digits</div>
                             </div>
                             <div class="plate-field">
-                                <input type="text" name="plate_letter[]" maxlength="1" placeholder="C" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');">
-                                <div class="hint">letter</div>
+                                <input type="text" name="plate_letter[]" maxlength="2" placeholder="C" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');">
+                                <div class="hint">1-2 letters</div>
                             </div>
                             <div class="plate-field">
-                                <input type="text" name="plate_p2[]" maxlength="5" placeholder="79770" oninput="this.value=this.value.replace(/\D/g,'');">
-                                <div class="hint">5 digits</div>
+                                <input type="text" name="plate_p2[]" maxlength="6" placeholder="79770" oninput="this.value=this.value.replace(/\D/g,'');">
+                                <div class="hint">1-6 digits</div>
                             </div>
                         </div>
                         <div class="car-details-row">
@@ -272,19 +315,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         div.innerHTML = `
             <div class="car-box-header">Car ${carCount}</div>
             <button type="button" class="car-box-remove" onclick="this.parentElement.remove()">Remove</button>
-            <label>Plate Number (Iraqi format)</label>
+            <label>Plate Number</label>
             <div class="plate-row">
                 <div class="plate-field">
-                    <input type="text" name="plate_p1[]" maxlength="2" placeholder="22" oninput="this.value=this.value.replace(/\\D/g,'');">
-                    <div class="hint">2 digits</div>
+                    <input type="text" name="plate_p1[]" maxlength="3" placeholder="22" oninput="this.value=this.value.replace(/\\D/g,'');">
+                    <div class="hint">1-3 digits</div>
                 </div>
                 <div class="plate-field">
-                    <input type="text" name="plate_letter[]" maxlength="1" placeholder="C" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');">
-                    <div class="hint">letter</div>
+                    <input type="text" name="plate_letter[]" maxlength="2" placeholder="C" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');">
+                    <div class="hint">1-2 letters</div>
                 </div>
                 <div class="plate-field">
-                    <input type="text" name="plate_p2[]" maxlength="5" placeholder="79770" oninput="this.value=this.value.replace(/\\D/g,'');">
-                    <div class="hint">5 digits</div>
+                    <input type="text" name="plate_p2[]" maxlength="6" placeholder="79770" oninput="this.value=this.value.replace(/\\D/g,'');">
+                    <div class="hint">1-6 digits</div>
                 </div>
             </div>
             <div class="car-details-row">
@@ -299,6 +342,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         `;
         container.appendChild(div);
+    }
+    function toggleTrack() {
+        const stage = document.getElementById('stageSelect').value;
+        const trackGroup = document.getElementById('trackGroup');
+        const trackSelect = document.getElementById('trackSelect');
+
+        if (stage === '4' || stage === '5') {
+            trackGroup.style.display = 'block';
+            trackSelect.required = true;
+        } else {
+            trackGroup.style.display = 'none';
+            trackSelect.required = false;
+            trackSelect.value = '';
+        }
     }
     function toggleTheme() {
         var isDark = document.documentElement.classList.toggle('dark-mode');

@@ -70,9 +70,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES['csv_file']) && $_FILE
             $value = trim($row[0]);
 
             if ($mode === 'id') {
-                $stmt = $conn->prepare("SELECT id, student_id, full_name, department FROM students WHERE student_id = ?");
+                $stmt = $conn->prepare("SELECT id, student_id, full_name, stage, class FROM students WHERE student_id = ?");
             } else {
-                $stmt = $conn->prepare("SELECT id, student_id, full_name, department FROM students WHERE full_name = ?");
+                $stmt = $conn->prepare("SELECT id, student_id, full_name, stage, class FROM students WHERE full_name = ?");
             }
             $stmt->bind_param("s", $value);
             $stmt->execute();
@@ -206,6 +206,7 @@ $students = $conn->query("
             <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
             <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
             <a href="bulk_delete.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
+            <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
@@ -250,7 +251,7 @@ $students = $conn->query("
                             <?php else: ?>
                                 <div class="preview-row matched">
                                     <span><strong><?php echo htmlspecialchars($p['full_name']); ?></strong> — <?php echo htmlspecialchars($p['student_id']); ?></span>
-                                    <span><?php echo htmlspecialchars($p['department'] ?: '—'); ?></span>
+                                    <span>Stage <?php echo intval($p['stage']); ?> • Class <?php echo htmlspecialchars($p['class']); ?></span>
                                 </div>
                             <?php endif; ?>
                         <?php endforeach; ?>
@@ -315,7 +316,8 @@ $students = $conn->query("
                                 <th class="checkbox-cell"><input type="checkbox" id="selectAll"></th>
                                 <th>Student</th>
                                 <th>Student ID</th>
-                                <th>Department</th>
+                                <th>Stage</th>
+                                <th>Class</th>
                                 <th>Cars</th>
                             </tr>
                         </thead>
@@ -330,7 +332,8 @@ $students = $conn->query("
                                         <strong><?php echo htmlspecialchars($s['full_name']); ?></strong>
                                     </td>
                                     <td><span class="student-id"><?php echo htmlspecialchars($s['student_id']); ?></span></td>
-                                    <td><?php echo htmlspecialchars($s['department'] ?: '—'); ?></td>
+                                    <td>Stage <?php echo intval($s['stage']); ?></td>
+                                    <td>Class <?php echo htmlspecialchars($s['class']); ?></td>
                                     <td>
                                         <?php if ($s['car_count'] > 0): ?>
                                             <span class="car-badge"><?php echo $s['car_count']; ?> car<?php echo $s['car_count'] > 1 ? 's' : ''; ?></span>

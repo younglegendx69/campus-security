@@ -57,6 +57,12 @@ $students = $conn->query("
         .student-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; }
         .student-link:hover strong { color: #2563eb; text-decoration: underline; }
         .student-id { font-family: monospace; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+        .stage-badge { display: inline-block; background: #f1f5f9; color: #0f172a; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .class-badge { display: inline-block; background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .track-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .track-programming { background: #dbeafe; color: #1e40af; }
+        .track-networking { background: #dcfce7; color: #166534; }
+        .track-network { background: #dcfce7; color: #166534; }
         .car-badge { display: inline-block; background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
         .no-cars { color: #94a3b8; font-size: 12px; }
         .actions { display: flex; gap: 10px; }
@@ -94,6 +100,7 @@ $students = $conn->query("
             <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
             <a href="view_students.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
             <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
+            <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
             <div class="nav-label">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
             <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
@@ -122,7 +129,9 @@ $students = $conn->query("
                         <tr>
                             <th>Student</th>
                             <th>Student ID</th>
-                            <th>Department</th>
+                            <th>Stage</th>
+                            <th>Class</th>
+                            <th>Field</th>
                             <th>Cars</th>
                             <th>Actions</th>
                         </tr>
@@ -137,7 +146,15 @@ $students = $conn->query("
                                     </a>
                                 </td>
                                 <td><span class="student-id"><?php echo htmlspecialchars($s['student_id']); ?></span></td>
-                                <td><?php echo htmlspecialchars($s['department'] ?: '—'); ?></td>
+                                <td><span class="stage-badge">Stage <?php echo intval($s['stage']); ?></span></td>
+                                <td><span class="class-badge">Class <?php echo htmlspecialchars($s['class']); ?></span></td>
+                                <td>
+                                    <?php if (($s['stage'] == 4 || $s['stage'] == 5) && $s['track']): ?>
+                                        <span class="track-badge track-<?php echo strtolower($s['track']); ?>"><?php echo htmlspecialchars($s['track']); ?></span>
+                                    <?php else: ?>
+                                        <span style="color: #94a3b8;">—</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if ($s['car_count'] > 0): ?>
                                         <span class="car-badge"><?php echo $s['car_count']; ?> car<?php echo $s['car_count'] > 1 ? 's' : ''; ?></span>
