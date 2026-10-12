@@ -1,27 +1,27 @@
 <?php
 // ============================================
-// AUTO-SETUP SCRIPT
-// Run this once after downloading the project
-// Visit: http://localhost/campus-security/setup.php
+// AUTO-SETUP — Runs once, then never needed again
 // ============================================
+
+mysqli_report(MYSQLI_REPORT_OFF);
 
 $host = "localhost";
 $user = "root";
 $pass = "";
 $dbname = "campus_security";
 
-// Connect to MySQL (without database)
-$conn = new mysqli($host, $user, $pass);
+// Connect to MySQL (no database yet)
+$conn = @new mysqli($host, $user, $pass);
 if ($conn->connect_error) {
-    die("MySQL connection failed: " . $conn->connect_error);
+    die("❌ MySQL is not running. Start XAMPP first (Apache + MySQL green).");
 }
 
 $results = [];
 
-// 1. Create database if not exists
-$conn->query("CREATE DATABASE IF NOT EXISTS campus_security");
-$results[] = "✅ Database 'campus_security' ready";
+// 1. Create database
+$conn->query("CREATE DATABASE IF NOT EXISTS $dbname");
 $conn->select_db($dbname);
+$results[] = "✅ Database 'campus_security' ready";
 
 // 2. Create users table
 $conn->query("CREATE TABLE IF NOT EXISTS users (
@@ -84,102 +84,57 @@ $conn->query("CREATE TABLE IF NOT EXISTS logs (
 )");
 $results[] = "✅ Table 'logs' ready";
 
-// ========== FIX MISSING COLUMNS ON EXISTING TABLES ==========
-
-// Check if 'stage' column exists in students
-$check = $conn->query("SHOW COLUMNS FROM students LIKE 'stage'");
-if ($check->num_rows == 0) {
-    $conn->query("ALTER TABLE students ADD COLUMN stage INT NULL AFTER full_name");
-    $results[] = "✅ Added column 'students.stage'";
-} else {
-    $results[] = "ℹ️ Column 'students.stage' already exists";
+// 7. Add missing columns to students
+$cols = ['stage' => "INT NULL AFTER full_name", 'class' => "CHAR(1) NULL AFTER stage", 'track' => "VARCHAR(30) NULL AFTER class"];
+foreach ($cols as $name => $def) {
+    $chk = $conn->query("SHOW COLUMNS FROM students LIKE '$name'");
+    if ($chk && $chk->num_rows == 0) {
+        $conn->query("ALTER TABLE students ADD COLUMN $name $def");
+        $results[] = "✅ Added 'students.$name'";
+    }
 }
 
-// Check 'class'
-$check = $conn->query("SHOW COLUMNS FROM students LIKE 'class'");
-if ($check->num_rows == 0) {
-    $conn->query("ALTER TABLE students ADD COLUMN class CHAR(1) NULL AFTER stage");
-    $results[] = "✅ Added column 'students.class'";
-} else {
-    $results[] = "ℹ️ Column 'students.class' already exists";
+// 8. Add missing columns to blacklist
+$bcols = ['expires_at' => "DATETIME NULL", 'added_by' => "INT NULL", 'duration_label' => "VARCHAR(50) NULL"];
+foreach ($bcols as $name => $def) {
+    $chk = $conn->query("SHOW COLUMNS FROM blacklist LIKE '$name'");
+    if ($chk && $chk->num_rows == 0) {
+        $conn->query("ALTER TABLE blacklist ADD COLUMN $name $def");
+        $results[] = "✅ Added 'blacklist.$name'";
+    }
 }
 
-// Check 'track'
-$check = $conn->query("SHOW COLUMNS FROM students LIKE 'track'");
-if ($check->num_rows == 0) {
-    $conn->query("ALTER TABLE students ADD COLUMN track VARCHAR(30) NULL AFTER class");
-    $results[] = "✅ Added column 'students.track'";
-} else {
-    $results[] = "ℹ️ Column 'students.track' already exists";
-}
-
-// Check 'expires_at' in blacklist
-$check = $conn->query("SHOW COLUMNS FROM blacklist LIKE 'expires_at'");
-if ($check->num_rows == 0) {
-    $conn->query("ALTER TABLE blacklist ADD COLUMN expires_at DATETIME NULL DEFAULT NULL");
-    $results[] = "✅ Added column 'blacklist.expires_at'";
-} else {
-    $results[] = "ℹ️ Column 'blacklist.expires_at' already exists";
-}
-
-// Check 'added_by' in blacklist
-$check = $conn->query("SHOW COLUMNS FROM blacklist LIKE 'added_by'");
-if ($check->num_rows == 0) {
-    $conn->query("ALTER TABLE blacklist ADD COLUMN added_by INT NULL DEFAULT NULL");
-    $results[] = "✅ Added column 'blacklist.added_by'";
-} else {
-    $results[] = "ℹ️ Column 'blacklist.added_by' already exists";
-}
-
-// Check 'duration_label' in blacklist
-$check = $conn->query("SHOW COLUMNS FROM blacklist LIKE 'duration_label'");
-if ($check->num_rows == 0) {
-    $conn->query("ALTER TABLE blacklist ADD COLUMN duration_label VARCHAR(50) NULL DEFAULT NULL");
-    $results[] = "✅ Added column 'blacklist.duration_label'";
-} else {
-    $results[] = "ℹ️ Column 'blacklist.duration_label' already exists";
-}
-
-// ========== FILL DEFAULTS FOR EXISTING DATA ==========
-
-// Fix students with NULL stage
+// 9. Fix old data
 $conn->query("UPDATE students SET stage = 1 WHERE stage IS NULL");
 $conn->query("UPDATE students SET class = 'A' WHERE class IS NULL");
-$results[] = "✅ Default stage/class filled for old students";
-
-// Clear track from stages 1-3 (shouldn't have one)
 $conn->query("UPDATE students SET track = NULL WHERE stage IN (1, 2, 3)");
-$results[] = "✅ Cleared track from stages 1-3";
-
-// Fix "Networking" → "Network"
 $conn->query("UPDATE students SET track = 'Network' WHERE track = 'Networking'");
-$results[] = "✅ Normalized 'Networking' to 'Network'";
+$results[] = "✅ Cleaned up old data";
 
-// ========== CREATE DEFAULT ADMIN IF MISSING ==========
-
-$check = $conn->query("SELECT id FROM users WHERE username = 'admin'");
-if ($check->num_rows == 0) {
+// 10. Create admin user if missing
+$chk = $conn->query("SELECT id FROM users WHERE username = 'admin'");
+if ($chk->num_rows == 0) {
     $conn->query("INSERT INTO users (username, password, role) VALUES ('admin', 'admin123', 'admin')");
-    $results[] = "✅ Default admin created (admin / admin123)";
+    $results[] = "✅ Admin created: admin / admin123";
 } else {
-    $results[] = "ℹ️ Admin user already exists";
+    $results[] = "ℹ️ Admin already exists";
 }
 
-$check = $conn->query("SELECT id FROM users WHERE username = 'guard1'");
-if ($check->num_rows == 0) {
+// 11. Create guard user if missing
+$chk = $conn->query("SELECT id FROM users WHERE username = 'guard1'");
+if ($chk->num_rows == 0) {
     $conn->query("INSERT INTO users (username, password, role) VALUES ('guard1', 'guard123', 'guard')");
-    $results[] = "✅ Default guard created (guard1 / guard123)";
+    $results[] = "✅ Guard created: guard1 / guard123";
 } else {
-    $results[] = "ℹ️ Guard user already exists";
+    $results[] = "ℹ️ Guard already exists";
 }
 
-// ========== CREATE UPLOADS FOLDER ==========
-$uploadsDir = __DIR__ . '/uploads';
-if (!is_dir($uploadsDir)) {
-    @mkdir($uploadsDir, 0755, true);
+// 12. Create uploads folder
+if (!is_dir(__DIR__ . '/uploads')) {
+    @mkdir(__DIR__ . '/uploads', 0755, true);
     $results[] = "✅ uploads folder created";
 } else {
-    $results[] = "ℹ️ uploads folder already exists";
+    $results[] = "ℹ️ uploads folder exists";
 }
 
 $conn->close();
@@ -195,20 +150,19 @@ $conn->close();
         .box { background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 100%; max-width: 560px; }
         h1 { font-size: 22px; color: #0f172a; margin-bottom: 8px; }
         .sub { color: #64748b; font-size: 14px; margin-bottom: 24px; }
-        ul { list-style: none; padding: 0; margin: 20px 0; }
+        ul { list-style: none; padding: 0; margin: 20px 0; max-height: 300px; overflow-y: auto; }
         ul li { padding: 10px 14px; background: #f8fafc; border-left: 3px solid #3b82f6; border-radius: 6px; font-size: 13.5px; margin-bottom: 6px; font-family: monospace; }
         .success-box { background: #dcfce7; color: #166534; padding: 16px 20px; border-radius: 10px; font-size: 14px; margin: 20px 0; border: 1px solid #bbf7d0; line-height: 1.6; }
         .warning-box { background: #fef3c7; color: #92400e; padding: 16px 20px; border-radius: 10px; font-size: 13.5px; margin: 20px 0; border: 1px solid #fde68a; }
-        .btn { display: inline-block; background: #0f172a; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; margin-right: 10px; }
+        .btn { display: inline-block; background: #0f172a; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; }
         .btn:hover { background: #1e293b; }
-        .btn-danger { background: #dc2626; }
-        .btn-danger:hover { background: #b91c1c; }
+        code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #dc2626; }
     </style>
 </head>
 <body>
     <div class="box">
         <h1>🛠️ Setup Complete</h1>
-        <p class="sub">Your database has been set up successfully</p>
+        <p class="sub">Your database is fully configured</p>
 
         <ul>
             <?php foreach ($results as $line): ?>
@@ -217,7 +171,7 @@ $conn->close();
         </ul>
 
         <div class="success-box">
-            ✅ <strong>Everything is ready!</strong>
+            ✅ <strong>Ready to use!</strong>
             <br><br>
             <strong>Login:</strong><br>
             Admin: <code>admin</code> / <code>admin123</code><br>
@@ -225,7 +179,7 @@ $conn->close();
         </div>
 
         <div class="warning-box">
-            ⚠️ <strong>Important:</strong> Delete the file <code>setup.php</code> from your server after running this. Otherwise anyone could reset your database by visiting this URL.
+            ⚠️ <strong>Optional:</strong> Delete this file (<code>setup.php</code>) after running it once for security.
         </div>
 
         <a href="login.php" class="btn">Go to Login →</a>
