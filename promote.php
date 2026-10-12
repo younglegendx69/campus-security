@@ -7,80 +7,33 @@ include 'db.php';
 $success = "";
 $error = "";
 
-function countByStage($conn, $stage) {
-    $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM students WHERE stage = ?");
-    $stmt->bind_param("i", $stage);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_assoc()['c'];
-}
-
-$counts = [];
-for ($i = 1; $i <= 5; $i++) $counts[$i] = countByStage($conn, $i);
-$total = array_sum($counts);
-
-// Fetch Stage 3 students (they need a field before Stage 4)
-$stage3_students = [];
-if ($counts[3] > 0) {
-    $res = $conn->query("SELECT id, full_name, student_id, class FROM students WHERE stage = 3 ORDER BY class ASC, full_name ASC");
-    while ($row = $res->fetch_assoc()) $stage3_students[] = $row;
-}
-
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
-    if ($total == 0) {
-        $error = "No students to promote.";
-    } else {
-        $fields = $_POST['field'] ?? [];
-        $missing = 0;
-        foreach ($stage3_students as $s) {
-            $f = $fields[$s['id']] ?? '';
-            if (!in_array($f, ['Programming', 'Network'])) $missing++;
-        }
-
-        if ($missing > 0) {
-            $error = "Please choose a Field for every Stage 3 student. Missing: $missing";
-        } else {
-            $conn->begin_transaction();
-            try {
-                // Step 1: Delete Stage 5 (graduates)
-                $conn->query("DELETE FROM students WHERE stage = 5");
-
-                // Step 2: Stage 4 -> Stage 5 (keep field)
-                $conn->query("UPDATE students SET stage = 5 WHERE stage = 4");
-
-                // Step 3: Stage 3 -> Stage 4 (with chosen field)
-                $upd = $conn->prepare("UPDATE students SET stage = 4, track = ? WHERE id = ?");
-                foreach ($stage3_students as $s) {
-                    $field = $fields[$s['id']];
-                    $upd->bind_param("si", $field, $s['id']);
-                    $upd->execute();
-                }
-
-                // Step 4: Stage 2 -> Stage 3 (clear track)
-                $conn->query("UPDATE students SET stage = 3, track = NULL WHERE stage = 2");
-
-                // Step 5: Stage 1 -> Stage 2 (clear track)
-                $conn->query("UPDATE students SET stage = 2, track = NULL WHERE stage = 1");
-
-                $conn->commit();
-                $success = "Promotion complete! Every student moved up one stage. Stage 5 graduates were deleted.";
-
-                for ($i = 1; $i <= 5; $i++) $counts[$i] = countByStage($conn, $i);
-                $total = array_sum($counts);
-                $stage3_students = [];
-            } catch (Exception $e) {
-                $conn->rollback();
-                $error = "Promotion failed: " . $e->getMessage();
-            }
-        }
+    $promoted = 0;
+    $graduated = 0;
+    $grad = $conn->query("SELECT id FROM students WHERE stage = 5");
+    $graduated = $grad->num_rows;
+    $conn->query("DELETE FROM students WHERE stage = 5");
+    for ($from = 4; $from >= 1; $from--) {
+        $to = $from + 1;
+        $stmt = $conn->prepare("UPDATE students SET stage = ? WHERE stage = ?");
+        $stmt->bind_param("ii", $to, $from);
+        $stmt->execute();
+        $promoted += $stmt->affected_rows;
     }
+    $success = "Promotion complete: $promoted student(s) promoted, $graduated graduated (removed).";
 }
+
+$stages = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+$r = $conn->query("SELECT stage, COUNT(*) AS c FROM students GROUP BY stage");
+while ($row = $r->fetch_assoc()) { $stages[intval($row['stage'])] = intval($row['c']); }
+$total = array_sum($stages);
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <title>Promote Students - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="theme.css?v=99">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
@@ -95,106 +48,82 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
         .sidebar nav a:hover { background: #f1f5f9; color: #0f172a; }
         .sidebar nav a.active { background: #0f172a; color: #fff; }
         .sidebar nav a svg { width: 18px; height: 18px; }
+        .lang-btn { background: #f1f5f9; border: 1px solid #e2e8f0; height: 28px; padding: 0 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11.5px; color: #475569; font-family: inherit; }
+        .lang-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
         .main { margin-left: 250px; padding: 32px; }
         .page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
         .page-sub { color: #64748b; font-size: 14px; margin-bottom: 24px; }
-
-        .warning-box { background: #fef3c7; color: #92400e; padding: 18px 22px; border-radius: 10px; font-size: 14px; margin-bottom: 24px; border: 1px solid #fde68a; line-height: 1.6; }
-        .warning-box strong { color: #78350f; }
-
-        .card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 28px; max-width: 1000px; margin-bottom: 20px; }
-        .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
-
-        .promo-list { list-style: none; padding: 0; }
-        .promo-list li { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        .promo-list li:last-child { border-bottom: none; }
-        .promo-list .label { font-weight: 600; }
-        .promo-from { color: #64748b; }
-        .promo-to { color: #2563eb; font-weight: 600; }
-        .promo-delete { color: #dc2626; font-weight: 600; }
-
-        .total-row { display: flex; justify-content: space-between; font-size: 15px; padding-top: 16px; margin-top: 8px; border-top: 2px solid #f1f5f9; font-weight: 700; }
-
-        .field-list { margin-top: 4px; }
-        .field-item { display: grid; grid-template-columns: 50px 1fr 110px 90px 200px; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
-        .field-item:last-child { border-bottom: none; }
-        .field-item .num { color: #94a3b8; font-size: 13px; font-weight: 600; }
-        .field-item .name { font-weight: 600; color: #0f172a; }
-        .field-item .sid {
-            font-family: monospace;
-            background: #f1f5f9;
-            color: #0f172a;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11.5px;
-            font-weight: 600;
-            text-align: center;
-            display: block;
-        }
-        .field-item .cl {
-            background: #fef3c7;
-            color: #92400e;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            text-align: center;
-        }
-        .field-item select {
-            width: 100%;
-            padding: 9px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 13.5px;
-            background: #fff;
-            color: #0f172a;
-        }
-        .field-item select:focus { outline: none; border-color: #0f172a; }
-
-        .helper-bar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-        .helper-bar button {
-            padding: 8px 16px;
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 12.5px;
-            font-weight: 500;
-            cursor: pointer;
-            font-family: inherit;
-            color: #475569;
-        }
-        .helper-bar button:hover { background: #e2e8f0; color: #0f172a; }
-
-        .btn { background: #16a34a; color: #fff; padding: 15px 32px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; max-width: 1000px; width: 100%; }
-        .btn:hover { background: #15803d; }
-
         .alert { padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
         .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .empty { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
-        .empty-success { text-align: center; padding: 60px 20px; color: #166534; font-size: 15px; line-height: 1.8; }
+        .card { background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 800px; }
+        .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+        .warning-box { background: #fef3c7; color: #92400e; padding: 16px 20px; border-radius: 10px; font-size: 13.5px; margin-bottom: 24px; border: 1px solid #fde68a; line-height: 1.7; }
+        .warning-box strong { display: block; margin-bottom: 6px; font-size: 14px; }
+        .promo-flow { display: grid; gap: 12px; margin: 24px 0; }
+        .flow-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; }
+        .flow-arrow { color: #64748b; font-weight: 600; }
+        .stage-pill { display: inline-block; padding: 5px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; }
+        .stage-1 { background: #dbeafe; color: #1e40af; }
+        .stage-2 { background: #dcfce7; color: #166534; }
+        .stage-3 { background: #fef3c7; color: #92400e; }
+        .stage-4 { background: #fae8ff; color: #86198f; }
+        .stage-5 { background: #fee2e2; color: #991b1b; }
+        .grad-pill { background: #0f172a; color: #fff; }
+        .count-badge { margin-left: auto; font-family: monospace; background: #fff; padding: 3px 10px; border-radius: 5px; font-size: 12px; color: #64748b; border: 1px solid #e2e8f0; }
+        .btn-promote { background: #dc2626; color: #fff; padding: 16px 32px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .btn-promote:hover { background: #b91c1c; }
+        .btn-promote:disabled { background: #94a3b8; cursor: not-allowed; }
+        .summary-box { background: #0f172a; color: #fff; padding: 20px 24px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; }
+        .summary-box strong { color: #60a5fa; }
 
-        /* Dark mode fixes */
-        html.dark-mode .field-item { border-bottom-color: #334155; }
-        html.dark-mode .field-item .num { color: #94a3b8; }
-        html.dark-mode .field-item .name { color: #e2e8f0; }
-        html.dark-mode .field-item .sid { background: #334155 !important; color: #ffffff !important; }
-        html.dark-mode .field-item .cl { background: #78350f; color: #fde68a; }
-        html.dark-mode .field-item select { background: #0f172a; border-color: #475569; color: #ffffff; }
-        html.dark-mode .helper-bar button { background: #334155; border-color: #475569; color: #e2e8f0; }
-        html.dark-mode .helper-bar button:hover { background: #475569; color: #ffffff; }
-        html.dark-mode .promo-list li { border-bottom-color: #334155; }
-        html.dark-mode .total-row { border-top-color: #334155; }
+        /* ============================================
+           DARK MODE — FULL FIX
+           ============================================ */
+        html.dark-mode { background: #0f172a !important; }
+        html.dark-mode body { background: #0f172a !important; color: #f1f5f9 !important; }
+        html.dark-mode .sidebar { background: #1e293b !important; border-right-color: #334155 !important; }
+        html.dark-mode .sidebar-header { border-bottom-color: #334155 !important; }
+        html.dark-mode .sidebar-header .name { color: #f1f5f9 !important; }
+        html.dark-mode .sidebar-header .name span { color: #94a3b8 !important; }
+        html.dark-mode .sidebar nav a { color: #cbd5e1 !important; }
+        html.dark-mode .sidebar nav a:hover { background: #334155 !important; color: #fff !important; }
+        html.dark-mode .sidebar nav a.active { background: #3b82f6 !important; color: #fff !important; }
+        html.dark-mode .nav-label { color: #64748b !important; }
+        html.dark-mode .main { background: #0f172a !important; }
+        html.dark-mode .page-title { color: #f1f5f9 !important; }
+        html.dark-mode .page-sub { color: #94a3b8 !important; }
+        html.dark-mode .card { background: #1e293b !important; border-color: #334155 !important; color: #f1f5f9 !important; }
+        html.dark-mode .card h3 { color: #f1f5f9 !important; }
         html.dark-mode .warning-box { background: #78350f !important; color: #fde68a !important; border-color: #92400e !important; }
-        html.dark-mode .warning-box strong { color: #fcd34d !important; }
-        html.dark-mode .empty-success { color: #86efac !important; }
+        html.dark-mode .warning-box strong { color: #fde68a !important; }
+        html.dark-mode .summary-box { background: #0f172a !important; color: #f1f5f9 !important; border: 1px solid #334155 !important; }
+        html.dark-mode .summary-box strong { color: #60a5fa !important; }
+        html.dark-mode .flow-row { background: #0f172a !important; border-color: #334155 !important; color: #f1f5f9 !important; }
+        html.dark-mode .count-badge { background: #1e293b !important; color: #cbd5e1 !important; border-color: #475569 !important; }
+        html.dark-mode .flow-arrow { color: #94a3b8 !important; }
+        html.dark-mode .stage-1 { background: #1e40af !important; color: #dbeafe !important; }
+        html.dark-mode .stage-2 { background: #166534 !important; color: #dcfce7 !important; }
+        html.dark-mode .stage-3 { background: #78350f !important; color: #fef3c7 !important; }
+        html.dark-mode .stage-4 { background: #86198f !important; color: #fae8ff !important; }
+        html.dark-mode .stage-5 { background: #7f1d1d !important; color: #fecaca !important; }
+        html.dark-mode .grad-pill { background: #f1f5f9 !important; color: #0f172a !important; }
+        html.dark-mode .alert-success { background: #14532d !important; color: #bbf7d0 !important; border-color: #166534 !important; }
+        html.dark-mode .alert-error { background: #7f1d1d !important; color: #fecaca !important; border-color: #991b1b !important; }
+        html.dark-mode .lang-btn { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
+        html.dark-mode .lang-btn:hover { background: #475569 !important; }
+        html.dark-mode .lang-btn.active { background: #3b82f6 !important; color: #fff !important; border-color: #3b82f6 !important; }
+        html.dark-mode button[onclick*="toggleTheme"] { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
+        html.dark-mode .card > form > button,
+        html.dark-mode .btn-promote { color: #fff !important; }
     </style>
     <script>
     (function() {
         try {
             var saved = localStorage.getItem('theme') || 'light';
             if (saved === 'dark') document.documentElement.classList.add('dark-mode');
+            var lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
         } catch(e) {}
     })();
     </script>
@@ -203,139 +132,97 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_promote'])) {
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="logo.png" alt="Logo">
-            <div class="name">Sardam Institute<span>Computer Sciences</span></div>
+            <div class="name">Sardam Institute<span data-en="Computer Sciences" data-ku="زانستەکانی کۆمپیوتەر" data-ar="علوم الحاسوب">Computer Sciences</span></div>
         </div>
-        <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Theme</span>
-            <button onclick="toggleTheme()" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            </button>
+        <div style="padding: 10px 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase;" data-en="Lang" data-ku="زمان" data-ar="لغة">Lang</span>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button onclick="setLanguage('en')" class="lang-btn">English</button>
+                <button onclick="setLanguage('ku')" class="lang-btn">کوردی</button>
+                <button onclick="setLanguage('ar')" class="lang-btn">عربي</button>
+                <button onclick="toggleTheme()" title="Theme" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+            </div>
         </div>
         <nav>
-            <div class="nav-label">Main</div>
-            <a href="dashboard.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
-            <div class="nav-label">Management</div>
-            <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
-            <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
-            <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
-            <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
-            <a href="promote.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
-            <div class="nav-label">Operations</div>
-            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
-            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
-            <div class="nav-label">Account</div>
-            <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
-            <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Change Password</a>
-            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sign Out</a>
+            <div class="nav-label" data-en="Main" data-ku="سەرەکی" data-ar="الرئيسية">Main</div>
+            <a href="dashboard.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> <span data-en="Dashboard" data-ku="داشبۆرد" data-ar="لوحة التحكم">Dashboard</span></a>
+            <div class="nav-label" data-en="Management" data-ku="بەڕێوەبردن" data-ar="الإدارة">Management</div>
+            <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> <span data-en="Add Student" data-ku="زیادکردنی قوتابی" data-ar="إضافة طالب">Add Student</span></a>
+            <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> <span data-en="Bulk Import" data-ku="هاوردەکردنی بەکۆمەڵ" data-ar="استيراد جماعي">Bulk Import</span></a>
+            <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> <span data-en="All Students" data-ku="هەموو قوتابیان" data-ar="جميع الطلاب">All Students</span></a>
+            <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> <span data-en="Bulk Delete" data-ku="سڕینەوەی بەکۆمەڵ" data-ar="حذف جماعي">Bulk Delete</span></a>
+            <a href="promote.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> <span data-en="Promote Students" data-ku="بەرزکردنەوەی قوتابیان" data-ar="ترقية الطلاب">Promote Students</span></a>
+            <div class="nav-label" data-en="Operations" data-ku="کارەکان" data-ar="العمليات">Operations</div>
+            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> <span data-en="Search" data-ku="گەڕان" data-ar="البحث">Search</span></a>
+            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> <span data-en="Blacklist" data-ku="ڕەشلیست" data-ar="القائمة السوداء">Blacklist</span></a>
+            <div class="nav-label" data-en="Account" data-ku="هەژمار" data-ar="الحساب">Account</div>
+            <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> <span data-en="Manage Users" data-ku="بەڕێوەبردنی بەکارهێنەران" data-ar="إدارة المستخدمين">Manage Users</span></a>
+            <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> <span data-en="Change Password" data-ku="گۆڕینی وشەی نهێنی" data-ar="تغيير كلمة المرور">Change Password</span></a>
+            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> <span data-en="Sign Out" data-ku="چوونەدەرەوە" data-ar="تسجيل الخروج">Sign Out</span></a>
         </nav>
     </aside>
     <main class="main">
-        <h1 class="page-title">Promote Students</h1>
-        <p class="page-sub">Advance every student exactly one stage. Stage 5 students graduate (deleted).</p>
+        <h1 class="page-title" data-en="Promote Students" data-ku="بەرزکردنەوەی قوتابیان" data-ar="ترقية الطلاب">Promote Students</h1>
+        <p class="page-sub" data-en="End-of-year promotion: Stage 1→2, 2→3, 3→4, 4→5, 5 graduates" data-ku="بەرزکردنەوەی کۆتایی ساڵ: قۆناغ 1→2، 2→3، 3→4، 4→5، 5 دەردەچێت" data-ar="ترقية نهاية العام: المرحلة 1→2، 2→3، 3→4، 4→5، 5 يتخرج">End-of-year promotion: Stage 1→2, 2→3, 3→4, 4→5, 5 graduates</p>
 
-        <?php if (!$success): ?>
-        <div class="warning-box">
-            ⚠️ <strong>Warning:</strong> This cannot be undone. Every student moves up <strong>exactly one stage</strong>:
-            <br>• Stage 1 → 2
-            <br>• Stage 2 → 3
-            <br>• Stage 3 → 4 (assign Field below)
-            <br>• Stage 4 → 5 (keep Field)
-            <br>• Stage 5 → <strong>Deleted (Graduated)</strong>
-            <br><br>
-            <strong>Backup first!</strong> phpMyAdmin → campus_security → Export → Go.
-        </div>
-        <?php endif; ?>
+        <?php if ($success) echo "<div class='alert alert-success'>" . htmlspecialchars($success) . "</div>"; ?>
+        <?php if ($error) echo "<div class='alert alert-error'>" . htmlspecialchars($error) . "</div>"; ?>
 
-        <?php if ($success): ?>
-            <div class="alert alert-success"><?php echo $success; ?></div>
-            <div class="card" style="text-align: center;">
-                <div class="empty-success">
-                    ✅ <strong>Promotion Complete!</strong><br><br>
-                    Every student moved up exactly ONE stage.<br>
-                    Stage 5 graduates were deleted.<br><br>
-                    <a href="promote.php" style="color: #2563eb;">Promote again</a>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($error) echo "<div class='alert alert-error'>$error</div>"; ?>
-
-        <?php if (!$success && $total > 0): ?>
         <div class="card">
-            <h3>📊 Preview — What Will Happen</h3>
-            <ul class="promo-list">
-                <li><span class="label promo-from">Stage 1</span><span><strong><?php echo $counts[1]; ?></strong> students</span><span class="promo-to">→ Stage 2</span></li>
-                <li><span class="label promo-from">Stage 2</span><span><strong><?php echo $counts[2]; ?></strong> students</span><span class="promo-to">→ Stage 3</span></li>
-                <li><span class="label promo-from">Stage 3</span><span><strong><?php echo $counts[3]; ?></strong> students</span><span class="promo-to">→ Stage 4 (assign Field below)</span></li>
-                <li><span class="label promo-from">Stage 4</span><span><strong><?php echo $counts[4]; ?></strong> students</span><span class="promo-to">→ Stage 5 (keep Field)</span></li>
-                <li><span class="label promo-from">Stage 5</span><span><strong><?php echo $counts[5]; ?></strong> students</span><span class="promo-delete">→ Graduate (Delete)</span></li>
-            </ul>
-            <div class="total-row"><span>Total students affected:</span><span><?php echo $total; ?></span></div>
-        </div>
-        <?php endif; ?>
+            <div class="warning-box">
+                <strong data-en="⚠️ This action cannot be undone" data-ku="⚠️ ئەم کارە ناگەڕێتەوە" data-ar="⚠️ لا يمكن التراجع عن هذا الإجراء">⚠️ This action cannot be undone</strong>
+                <span data-en="Every student will move up one stage. Stage 5 students will be removed permanently (graduated)." data-ku="هەموو قوتابییەک قۆناغێک بەرز دەبێتەوە. قوتابیانی قۆناغی 5 بە تەواوی دەسڕێنەوە (دەردەچن)." data-ar="سينتقل كل طالب إلى مرحلة واحدة أعلى. سيتم حذف طلاب المرحلة 5 نهائياً (تخرجوا).">Every student will move up one stage. Stage 5 students will be removed permanently (graduated).</span>
+            </div>
 
-        <?php if (!$success && count($stage3_students) > 0): ?>
-        <form method="POST" onsubmit="return confirmPromote()">
-            <div class="card">
-                <h3>👥 Assign a Field to Each Stage 3 Student</h3>
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
-                    Every Stage 3 student moves to <strong>Stage 4</strong> and must have a Field. Choose each one individually.
-                </p>
+            <div class="summary-box">
+                <span data-en="Total students:" data-ku="کۆی قوتابیان:" data-ar="إجمالي الطلاب:">Total students:</span> <strong><?php echo $total; ?></strong>
+            </div>
 
-                <div class="helper-bar">
-                    <button type="button" onclick="setAll('Programming')">Set All → Programming</button>
-                    <button type="button" onclick="setAll('Network')">Set All → Network</button>
-                    <button type="button" onclick="setAll('')">Clear All</button>
+            <h3 data-en="Promotion Preview" data-ku="پێشبینینی بەرزکردنەوە" data-ar="معاينة الترقية">Promotion Preview</h3>
+            <div class="promo-flow">
+                <div class="flow-row">
+                    <span class="stage-pill stage-1" data-en="Stage 1" data-ku="قۆناغ 1" data-ar="المرحلة 1">Stage 1</span>
+                    <span class="flow-arrow">→</span>
+                    <span class="stage-pill stage-2" data-en="Stage 2" data-ku="قۆناغ 2" data-ar="المرحلة 2">Stage 2</span>
+                    <span class="count-badge"><?php echo $stages[1]; ?></span>
                 </div>
-
-                <div class="field-list">
-                    <?php foreach ($stage3_students as $i => $s): ?>
-                        <div class="field-item">
-                            <div class="num">#<?php echo $i + 1; ?></div>
-                            <div class="name"><?php echo htmlspecialchars($s['full_name']); ?></div>
-                            <div class="sid"><?php echo htmlspecialchars($s['student_id']); ?></div>
-                            <div class="cl">Class <?php echo htmlspecialchars($s['class']); ?></div>
-                            <select name="field[<?php echo $s['id']; ?>]" class="field-select" required>
-                                <option value="">-- Choose Field --</option>
-                                <option value="Programming">Programming</option>
-                                <option value="Network">Network</option>
-                            </select>
-                        </div>
-                    <?php endforeach; ?>
+                <div class="flow-row">
+                    <span class="stage-pill stage-2" data-en="Stage 2" data-ku="قۆناغ 2" data-ar="المرحلة 2">Stage 2</span>
+                    <span class="flow-arrow">→</span>
+                    <span class="stage-pill stage-3" data-en="Stage 3" data-ku="قۆناغ 3" data-ar="المرحلة 3">Stage 3</span>
+                    <span class="count-badge"><?php echo $stages[2]; ?></span>
+                </div>
+                <div class="flow-row">
+                    <span class="stage-pill stage-3" data-en="Stage 3" data-ku="قۆناغ 3" data-ar="المرحلة 3">Stage 3</span>
+                    <span class="flow-arrow">→</span>
+                    <span class="stage-pill stage-4" data-en="Stage 4" data-ku="قۆناغ 4" data-ar="المرحلة 4">Stage 4</span>
+                    <span class="count-badge"><?php echo $stages[3]; ?></span>
+                </div>
+                <div class="flow-row">
+                    <span class="stage-pill stage-4" data-en="Stage 4" data-ku="قۆناغ 4" data-ar="المرحلة 4">Stage 4</span>
+                    <span class="flow-arrow">→</span>
+                    <span class="stage-pill stage-5" data-en="Stage 5" data-ku="قۆناغ 5" data-ar="المرحلة 5">Stage 5</span>
+                    <span class="count-badge"><?php echo $stages[4]; ?></span>
+                </div>
+                <div class="flow-row">
+                    <span class="stage-pill stage-5" data-en="Stage 5" data-ku="قۆناغ 5" data-ar="المرحلة 5">Stage 5</span>
+                    <span class="flow-arrow">→</span>
+                    <span class="stage-pill grad-pill" data-en="Graduated" data-ku="دەرچوو" data-ar="تخرج">Graduated</span>
+                    <span class="count-badge"><?php echo $stages[5]; ?></span>
                 </div>
             </div>
 
-            <button type="submit" name="confirm_promote" class="btn">
-                ✅ Confirm Promotion — Advance All Students
-            </button>
-        </form>
-        <?php elseif (!$success && $total > 0): ?>
-            <form method="POST" onsubmit="return confirmPromote()">
-                <button type="submit" name="confirm_promote" class="btn">
-                    ✅ Confirm Promotion — Advance All Students
-                </button>
+            <form method="POST" onsubmit="return confirm('Promote all students? This cannot be undone.')">
+                <input type="hidden" name="confirm_promote" value="1">
+                <button type="submit" class="btn-promote" <?php echo $total == 0 ? 'disabled' : ''; ?> data-en="Promote All Students" data-ku="بەرزکردنەوەی هەموو قوتابیان" data-ar="ترقية جميع الطلاب">Promote All Students</button>
             </form>
-        <?php elseif (!$success): ?>
-            <div class="card">
-                <div class="empty">No students in the system to promote.</div>
-            </div>
-        <?php endif; ?>
+        </div>
     </main>
 
+    <script src="language.js?v=99"></script>
     <script>
-    function setAll(value) {
-        document.querySelectorAll('.field-select').forEach(sel => sel.value = value);
-    }
-    function confirmPromote() {
-        const selects = document.querySelectorAll('.field-select');
-        let missing = 0;
-        selects.forEach(s => { if (!s.value) missing++; });
-        if (missing > 0) {
-            alert('Please choose a Field for every Stage 3 student. Missing: ' + missing);
-            return false;
-        }
-        return confirm('Are you SURE?\n\nEvery student moves up ONE stage.\nStage 5 students will be DELETED (graduated).\nThis cannot be undone.');
-    }
     function toggleTheme() {
         var isDark = document.documentElement.classList.toggle('dark-mode');
         try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e) {}

@@ -1,225 +1,276 @@
-/* ========== THEME TOGGLE BUTTON ========== */
-.theme-toggle {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    color: #475569;
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.15s;
-    padding: 0;
-}
-.theme-toggle:hover { background: #e2e8f0; }
+/* ============================================
+   SARDAM INSTITUTE — THEME (FIXED)
+   Aggressive dark mode — wins every fight
+   ============================================ */
 
-/* ========== GLOBAL DARK ========== */
+/* ---------- LIGHT VARIABLES ---------- */
+:root {
+    --bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+    --sidebar-bg: #ffffff;
+    --hover-bg: #f1f5f9;
+}
+
+/* ---------- DARK VARIABLES ---------- */
+html.dark-mode {
+    --bg: #0f172a;
+    --card-bg: #1e293b;
+    --border: #334155;
+    --text: #f1f5f9;
+    --text-muted: #cbd5e1;
+    --text-light: #94a3b8;
+    --input-bg: #0f172a;
+    --input-border: #475569;
+    --sidebar-bg: #1e293b;
+    --hover-bg: #334155;
+}
+
+/* ============================================
+   DARK MODE — ATTACK EVERYTHING
+   ============================================ */
+
+/* Page background */
 html.dark-mode,
 html.dark-mode body,
+html.dark-mode main,
 html.dark-mode .main,
 html.dark-mode .content {
-    background: #0f172a !important;
-    color: #e2e8f0 !important;
+    background: var(--bg) !important;
+    color: var(--text) !important;
 }
 
+/* Every white container becomes dark */
+html.dark-mode .sidebar,
+html.dark-mode .topbar,
+html.dark-mode .card,
+html.dark-mode .table-card,
+html.dark-mode .add-card,
+html.dark-mode .section-card,
+html.dark-mode .profile-card,
+html.dark-mode .blacklist-card,
+html.dark-mode .csv-card,
+html.dark-mode .search-card,
+html.dark-mode .student-result,
+html.dark-mode .car-item,
+html.dark-mode .car-box,
+html.dark-mode .stat,
+html.dark-mode .big-card,
+html.dark-mode .logout-card,
+html.dark-mode .report,
+html.dark-mode .preview-card,
+html.dark-mode .modal,
+html.dark-mode .box,
+html.dark-mode .welcome-box,
+html.dark-mode .flow-row,
+html.dark-mode .info-item,
+html.dark-mode .car-mini,
+html.dark-mode .student-result-header,
+html.dark-mode .summary-box,
+html.dark-mode .alert,
+html.dark-mode .info-note,
+html.dark-mode .warning-box,
+html.dark-mode .success-box,
+html.dark-mode .empty,
+html.dark-mode .no-match {
+    background: var(--card-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+/* Sidebar specifics */
+html.dark-mode .sidebar-header {
+    border-color: var(--border) !important;
+    background: var(--sidebar-bg) !important;
+}
+html.dark-mode .sidebar-header .name {
+    color: var(--text) !important;
+}
+html.dark-mode .sidebar-header .name span {
+    color: var(--text-muted) !important;
+}
+html.dark-mode .sidebar nav a {
+    color: var(--text-muted) !important;
+}
+html.dark-mode .sidebar nav a:hover {
+    background: var(--hover-bg) !important;
+    color: var(--text) !important;
+}
+html.dark-mode .sidebar nav a.active {
+    background: #3b82f6 !important;
+    color: #fff !important;
+}
+html.dark-mode .sidebar nav a.active * {
+    color: #fff !important;
+    stroke: #fff !important;
+}
+html.dark-mode .nav-label {
+    color: var(--text-light) !important;
+}
+
+/* Topbar */
+html.dark-mode .topbar {
+    background: var(--card-bg) !important;
+    border-color: var(--border) !important;
+}
+html.dark-mode .topbar h1 {
+    color: var(--text) !important;
+}
+html.dark-mode .user-info .name {
+    color: var(--text) !important;
+}
+html.dark-mode .user-info .role {
+    color: var(--text-muted) !important;
+}
+html.dark-mode .logout-btn {
+    background: var(--hover-bg) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+/* All headings */
 html.dark-mode h1,
 html.dark-mode h2,
 html.dark-mode h3,
+html.dark-mode h4,
+html.dark-mode h5,
+html.dark-mode h6,
 html.dark-mode .page-title,
-html.dark-mode .section-head {
-    color: #e2e8f0 !important;
-}
-
-html.dark-mode p,
-html.dark-mode .page-sub {
-    color: #94a3b8 !important;
-}
-
-/* ========== SIDEBAR ========== */
-html.dark-mode .sidebar {
-    background: #1e293b !important;
-    border-right-color: #334155 !important;
-}
-html.dark-mode .sidebar-header {
-    border-bottom-color: #334155 !important;
-}
-html.dark-mode .sidebar-header .name,
-html.dark-mode .sidebar-header .name span {
-    color: #e2e8f0 !important;
-}
-html.dark-mode .sidebar nav a {
-    color: #94a3b8 !important;
-}
-html.dark-mode .sidebar nav a:hover {
-    background: #334155 !important;
-    color: #ffffff !important;
-}
-html.dark-mode .sidebar nav a.active {
-    background: #2563eb !important;
-    color: #ffffff !important;
-}
-html.dark-mode .nav-label {
-    color: #64748b !important;
-}
-html.dark-mode .sidebar > div[style*="border-bottom"] {
-    border-bottom-color: #334155 !important;
-}
-
-/* ========== TOPBAR ========== */
-html.dark-mode .topbar {
-    background: #1e293b !important;
-    border-bottom-color: #334155 !important;
-}
-html.dark-mode .topbar h1 { color: #e2e8f0 !important; }
-html.dark-mode .user-info .name { color: #e2e8f0 !important; }
-html.dark-mode .user-info .role { color: #94a3b8 !important; }
-html.dark-mode .logout-btn {
-    background: #334155 !important;
-    color: #e2e8f0 !important;
-    border-color: #475569 !important;
-}
-html.dark-mode .logout-btn:hover {
-    background: #475569 !important;
-    color: #fca5a5 !important;
-}
-html.dark-mode .avatar {
-    background: #2563eb !important;
-    color: #ffffff !important;
-}
-
-/* ========== CARDS ========== */
-html.dark-mode .card,
-html.dark-mode .stat,
-html.dark-mode .search-card,
-html.dark-mode .table-card,
-html.dark-mode .blacklist-card,
-html.dark-mode .csv-card,
-html.dark-mode .preview-card,
-html.dark-mode .report,
-html.dark-mode .stat-box {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-
-html.dark-mode .card h3,
-html.dark-mode .stat-label,
-html.dark-mode .stat-value,
+html.dark-mode .profile-name,
 html.dark-mode .student-name,
 html.dark-mode .name-cell,
-html.dark-mode .student-name-lg {
-    color: #e2e8f0 !important;
+html.dark-mode .stat-value,
+html.dark-mode .section-title,
+html.dark-mode .card h3,
+html.dark-mode strong,
+html.dark-mode b {
+    color: var(--text) !important;
 }
 
-html.dark-mode .card p {
-    color: #cbd5e1 !important;
-}
-
-html.dark-mode .section-head {
-    border-bottom-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-
+/* All muted text */
+html.dark-mode p,
+html.dark-mode label,
+html.dark-mode .page-sub,
+html.dark-mode .stat-label,
 html.dark-mode .stat-sub,
-html.dark-mode .meta-cell {
-    color: #94a3b8 !important;
-}
-html.dark-mode .stat-icon,
-html.dark-mode .card .icon-box {
-    background: #334155 !important;
-}
-html.dark-mode .stat-box .num { color: #e2e8f0 !important; }
-html.dark-mode .stat-box .lbl { color: #94a3b8 !important; }
-
-/* ========== USER INFO CARD ========== */
-html.dark-mode .user-info {
-    background: #273549 !important;
-    border-color: #334155 !important;
-}
-html.dark-mode .user-info .username,
-html.dark-mode .user-meta .username {
-    color: #ffffff !important;
-}
-html.dark-mode .user-info .role,
-html.dark-mode .user-meta .role {
-    color: #94a3b8 !important;
-}
-html.dark-mode .user-avatar {
-    background: #2563eb !important;
-    color: #ffffff !important;
+html.dark-mode .student-id,
+html.dark-mode .date-cell,
+html.dark-mode .sub,
+html.dark-mode .hint,
+html.dark-mode .info-label,
+html.dark-mode .meta-cell,
+html.dark-mode .car-details,
+html.dark-mode .unknown,
+html.dark-mode .no-cars,
+html.dark-mode .empty,
+html.dark-mode .disabled-note,
+html.dark-mode .optional,
+html.dark-mode small {
+    color: var(--text-muted) !important;
 }
 
-/* ========== DASHBOARD CARDS ========== */
-html.dark-mode .big-card {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .big-card:hover { border-color: #2563eb !important; }
-html.dark-mode .big-card h2 { color: #e2e8f0 !important; }
-html.dark-mode .big-card p { color: #94a3b8 !important; }
-html.dark-mode .big-card .icon { background: #334155 !important; }
-html.dark-mode .welcome-box {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-}
-
-/* ========== TABLES ========== */
-html.dark-mode table { color: #e2e8f0 !important; }
-html.dark-mode th {
-    background: #0f172a !important;
-    color: #94a3b8 !important;
-    border-bottom-color: #334155 !important;
-}
-html.dark-mode td { border-bottom-color: #334155 !important; }
-html.dark-mode tr:hover td { background: #273549 !important; }
-html.dark-mode .avatar-sm {
-    background: #2563eb !important;
-    color: #ffffff !important;
-}
-html.dark-mode .student-id {
-    background: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .car-badge {
-    background: #1e3a8a !important;
-    color: #bfdbfe !important;
-}
-html.dark-mode .no-cars { color: #64748b !important; }
-
-/* ========== INPUTS ========== */
-html.dark-mode input[type="text"],
-html.dark-mode input[type="password"],
-html.dark-mode input[type="email"],
-html.dark-mode input[type="file"],
-html.dark-mode textarea,
-html.dark-mode select {
-    background: #0f172a !important;
-    border-color: #475569 !important;
-    color: #ffffff !important;
+/* All inputs */
+html.dark-mode input,
+html.dark-mode select,
+html.dark-mode textarea {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text) !important;
 }
 html.dark-mode input::placeholder,
 html.dark-mode textarea::placeholder {
     color: #64748b !important;
 }
 html.dark-mode input[readonly] {
-    background: #334155 !important;
-    color: #94a3b8 !important;
+    background: var(--hover-bg) !important;
+    color: var(--text-muted) !important;
 }
-html.dark-mode label { color: #cbd5e1 !important; }
-html.dark-mode .hint,
-html.dark-mode .optional { color: #94a3b8 !important; }
-html.dark-mode .search-form input,
-html.dark-mode .toolbar input {
-    background: #0f172a !important;
-    border-color: #475569 !important;
-    color: #ffffff !important;
-}
-html.dark-mode .search-tips { color: #94a3b8 !important; }
-html.dark-mode .search-tips strong { color: #e2e8f0 !important; }
 
-/* ========== ALERTS ========== */
+/* Tables */
+html.dark-mode table {
+    background: var(--card-bg) !important;
+    color: var(--text) !important;
+}
+html.dark-mode thead,
+html.dark-mode th {
+    background: #0f172a !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border) !important;
+}
+html.dark-mode tbody,
+html.dark-mode td,
+html.dark-mode tr {
+    background: var(--card-bg) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+html.dark-mode tr:hover td {
+    background: var(--hover-bg) !important;
+}
+
+/* Icons / avatars / small circles */
+html.dark-mode .card .icon-box,
+html.dark-mode .big-card .icon,
+html.dark-mode .stat-icon,
+html.dark-mode .avatar,
+html.dark-mode .avatar-sm,
+html.dark-mode .student-avatar,
+html.dark-mode .profile-photo,
+html.dark-mode .car-photo {
+    background: var(--hover-bg) !important;
+    color: var(--text) !important;
+}
+
+/* Badges — keep their color but readable */
+html.dark-mode .badge-id,
+html.dark-mode .student-id,
+html.dark-mode .student-id-tag {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+}
+html.dark-mode .badge-stage,
+html.dark-mode .stage-badge {
+    background: #1e40af !important;
+    color: #dbeafe !important;
+}
+html.dark-mode .badge-class,
+html.dark-mode .class-badge {
+    background: #78350f !important;
+    color: #fef3c7 !important;
+}
+html.dark-mode .track-programming,
+html.dark-mode .badge-track-programming {
+    background: #1e40af !important;
+    color: #dbeafe !important;
+}
+html.dark-mode .track-network,
+html.dark-mode .badge-track-network {
+    background: #166534 !important;
+    color: #dcfce7 !important;
+}
+html.dark-mode .car-badge {
+    background: #1e40af !important;
+    color: #dbeafe !important;
+}
+html.dark-mode .role-admin {
+    background: #78350f !important;
+    color: #fef3c7 !important;
+}
+html.dark-mode .role-guard {
+    background: #1e40af !important;
+    color: #dbeafe !important;
+}
+html.dark-mode .duration-badge {
+    background: #78350f !important;
+    color: #fef3c7 !important;
+}
+
+/* Alerts */
 html.dark-mode .alert-success {
     background: #14532d !important;
     color: #bbf7d0 !important;
@@ -230,209 +281,110 @@ html.dark-mode .alert-error {
     color: #fecaca !important;
     border-color: #991b1b !important;
 }
-html.dark-mode .warning-box,
-html.dark-mode .guard-note {
+html.dark-mode .info-note {
+    background: #1e3a8a !important;
+    color: #bfdbfe !important;
+    border-color: #1e40af !important;
+}
+html.dark-mode .warning-box {
     background: #78350f !important;
     color: #fde68a !important;
     border-color: #92400e !important;
 }
-html.dark-mode .warning-box strong {
-    color: #fcd34d !important;
-}
-html.dark-mode .info-note {
-    background: #0c4a6e !important;
-    color: #bae6fd !important;
-    border-color: #075985 !important;
+html.dark-mode .success-box {
+    background: #14532d !important;
+    color: #bbf7d0 !important;
+    border-color: #166534 !important;
 }
 
-/* ========== SEARCH RESULTS ========== */
-html.dark-mode .result-card,
-html.dark-mode .student-result {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .plate-badge {
-    background: #2563eb !important;
-    color: #ffffff !important;
-}
-html.dark-mode .info-row label,
-html.dark-mode .info-row .label { color: #94a3b8 !important; }
-html.dark-mode .info-row .value { color: #e2e8f0 !important; }
-html.dark-mode .student-photo {
-    background: #334155 !important;
-    color: #94a3b8 !important;
-}
-
-/* ========== STUDENT PROFILE ========== */
-html.dark-mode .profile-header {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-}
-html.dark-mode .info-row { border-bottom-color: #334155 !important; }
-html.dark-mode .car-card,
-html.dark-mode .car-mini,
-html.dark-mode .car-box {
-    background: #273549 !important;
-    border-color: #334155 !important;
-}
-html.dark-mode .car-card .model,
-html.dark-mode .car-box-header { color: #e2e8f0 !important; }
-html.dark-mode .car-card .color,
-html.dark-mode .car-mini .car-details { color: #94a3b8 !important; }
-html.dark-mode .empty-cars,
-html.dark-mode .empty-cars-msg { color: #64748b !important; }
-
-/* ========== BLACKLIST ========== */
-html.dark-mode .plate {
-    background: #dc2626 !important;
-    color: #ffffff !important;
-}
-html.dark-mode .duration-badge {
-    background: #78350f !important;
-    color: #fde68a !important;
-}
-html.dark-mode .duration-badge.perm {
-    background: #7f1d1d !important;
-    color: #fecaca !important;
-}
-html.dark-mode .expires-info { color: #94a3b8 !important; }
-html.dark-mode .badge-blocked-sm {
-    background: #7f1d1d !important;
-    color: #fecaca !important;
-}
-html.dark-mode .badge-locked {
-    background: #334155 !important;
-    color: #94a3b8 !important;
-}
-
-/* ========== TABS ========== */
-html.dark-mode .tabs { background: #334155 !important; }
-html.dark-mode .tab { color: #94a3b8 !important; }
-html.dark-mode .tab.active {
-    background: #1e293b !important;
-    color: #ffffff !important;
-}
-
-/* ========== MODAL ========== */
-html.dark-mode .modal {
-    background: #1e293b !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .modal h3 { color: #e2e8f0 !important; }
-html.dark-mode .modal p,
-html.dark-mode .modal label { color: #94a3b8 !important; }
-html.dark-mode .modal-btn-cancel {
-    background: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .camera-modal {
-    background: #1e293b !important;
-    color: #e2e8f0 !important;
-}
-
-/* ========== CSV / INSTRUCTIONS ========== */
-html.dark-mode .instructions {
+/* Promote page flow rows */
+html.dark-mode .flow-row {
     background: #0f172a !important;
+    border-color: var(--border) !important;
+}
+html.dark-mode .count-badge {
+    background: #334155 !important;
     color: #cbd5e1 !important;
+    border-color: #475569 !important;
 }
-html.dark-mode .instructions code {
-    background: #1e293b !important;
-    color: #fbbf24 !important;
-}
-html.dark-mode .preview-card { border-color: #dc2626 !important; }
-html.dark-mode .preview-card h3 { color: #fca5a5 !important; }
-html.dark-mode .preview-list { border-color: #334155 !important; }
-html.dark-mode .preview-row {
-    border-bottom-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .preview-row.matched { background: #7f1d1d !important; }
-html.dark-mode .preview-row.not-found {
+html.dark-mode .summary-box {
     background: #0f172a !important;
-    color: #94a3b8 !important;
+    color: #f1f5f9 !important;
 }
-html.dark-mode .preview-summary { color: #cbd5e1 !important; }
-html.dark-mode .preview-summary strong { color: #fca5a5 !important; }
 
-/* ========== THEME TOGGLE IN DARK ========== */
-html.dark-mode .theme-toggle {
+/* Language buttons */
+.lang-btn {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    color: #475569;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: 0.15s;
+}
+.lang-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.lang-btn.active {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+html.dark-mode .lang-btn {
     background: #334155 !important;
     border-color: #475569 !important;
-    color: #fbbf24 !important;
+    color: #e2e8f0 !important;
 }
-html.dark-mode .theme-toggle:hover {
+html.dark-mode .lang-btn:hover {
     background: #475569 !important;
 }
+html.dark-mode .lang-btn.active {
+    background: #3b82f6 !important;
+    color: #fff !important;
+    border-color: #3b82f6 !important;
+}
 
-/* ========== EMPTY STATE ========== */
-html.dark-mode .empty,
-html.dark-mode .empty-state,
-html.dark-mode .no-result,
-html.dark-mode .no-match {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-    color: #94a3b8 !important;
-}
-html.dark-mode .empty-state h3,
-html.dark-mode .no-result h3 {
-    color: #94a3b8 !important;
-}
-html.dark-mode .no-result h3 { color: #fca5a5 !important; }
-
-/* ========== PROMOTE PAGE ========== */
-html.dark-mode .field-item {
-    border-bottom-color: #334155 !important;
-}
-html.dark-mode .field-item .num {
-    color: #94a3b8 !important;
-}
-html.dark-mode .field-item .name {
-    color: #e2e8f0 !important;
-}
-html.dark-mode .field-item .sid {
-    background: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .field-item .cl {
-    background: #78350f !important;
-    color: #fde68a !important;
-}
-html.dark-mode .field-item select {
-    background: #0f172a !important;
-    border-color: #475569 !important;
-    color: #ffffff !important;
-}
-html.dark-mode .helper-bar button {
+/* Theme toggle button */
+html.dark-mode button[onclick*="toggleTheme"] {
     background: #334155 !important;
     border-color: #475569 !important;
     color: #e2e8f0 !important;
 }
-html.dark-mode .helper-bar button:hover {
-    background: #475569 !important;
-    color: #ffffff !important;
-}
-html.dark-mode .empty-success {
-    color: #86efac !important;
-}
-html.dark-mode .promo-list li {
-    border-bottom-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .promo-list .label,
-html.dark-mode .promo-list .count {
-    color: #e2e8f0 !important;
-}
-html.dark-mode .promo-from { color: #94a3b8 !important; }
-html.dark-mode .promo-to { color: #60a5fa !important; }
-html.dark-mode .promo-delete { color: #fca5a5 !important; }
-html.dark-mode .total-row {
-    border-top-color: #334155 !important;
-    color: #e2e8f0 !important;
-}
-html.dark-mode .btn-green { background: #16a34a !important; }
-html.dark-mode .btn-green:hover { background: #15803d !important; }
 
-/* ========== SMOOTH TRANSITION ========== */
-body, .sidebar, .card, .stat, .topbar, .modal, table, th, td, input, textarea, select {
-    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+/* Any element with inline white background — catch leftovers */
+html.dark-mode [style*="background: #fff"],
+html.dark-mode [style*="background: white"],
+html.dark-mode [style*="background-color: #fff"],
+html.dark-mode [style*="background-color: white"] {
+    background: var(--card-bg) !important;
+    color: var(--text) !important;
+}
+
+/* SVG strokes — invert when too dark */
+html.dark-mode svg[stroke="#0f172a"],
+html.dark-mode svg[stroke="#000"],
+html.dark-mode svg[stroke="black"] {
+    stroke: var(--text) !important;
+}
+
+/* Scrollbars */
+html.dark-mode ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+html.dark-mode ::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+html.dark-mode ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 5px;
+}
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
 }

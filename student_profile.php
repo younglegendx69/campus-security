@@ -4,48 +4,36 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
 include 'db.php';
 
 $is_admin = ($_SESSION['role'] == 'admin');
-$is_guard = ($_SESSION['role'] == 'guard');
+$id = intval($_GET['id'] ?? 0);
 
-if (!isset($_GET['id'])) {
-    header("Location: view_students.php");
-    exit;
-}
-
-$id = intval($_GET['id']);
+if ($id <= 0) { header("Location: view_students.php"); exit; }
 
 $stmt = $conn->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $student = $stmt->get_result()->fetch_assoc();
 
-if (!$student) {
-    header("Location: view_students.php");
-    exit;
-}
+if (!$student) { header("Location: view_students.php"); exit; }
 
-$stmt2 = $conn->prepare("SELECT * FROM cars WHERE student_id = ?");
-$stmt2->bind_param("i", $id);
-$stmt2->execute();
-$cars = $stmt2->get_result();
-$cars_array = [];
-while ($c = $cars->fetch_assoc()) $cars_array[] = $c;
-$car_count = count($cars_array);
+$cars_stmt = $conn->prepare("SELECT * FROM cars WHERE student_id = ? ORDER BY id ASC");
+$cars_stmt->bind_param("i", $id);
+$cars_stmt->execute();
+$cars = $cars_stmt->get_result();
 
-function isPlateBlacklisted($conn, $plate) {
-    $stmt = $conn->prepare("SELECT reason FROM blacklist WHERE plate_number = ? AND (expires_at IS NULL OR expires_at > NOW())");
-    $stmt->bind_param("s", $plate);
-    $stmt->execute();
-    $r = $stmt->get_result();
-    if ($r->num_rows > 0) return $r->fetch_assoc()['reason'];
-    return false;
+function isBlocked($conn, $plate) {
+    $s = $conn->prepare("SELECT reason, expires_at, duration_label FROM blacklist WHERE plate_number = ? AND (expires_at IS NULL OR expires_at > NOW())");
+    $s->bind_param("s", $plate);
+    $s->execute();
+    $r = $s->get_result();
+    return $r->num_rows > 0 ? $r->fetch_assoc() : false;
 }
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title><?php echo htmlspecialchars($student['full_name']); ?> - Sardam Institute</title>
+    <title>Student Profile - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="theme.css?v=99">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
@@ -60,50 +48,92 @@ function isPlateBlacklisted($conn, $plate) {
         .sidebar nav a:hover { background: #f1f5f9; color: #0f172a; }
         .sidebar nav a.active { background: #0f172a; color: #fff; }
         .sidebar nav a svg { width: 18px; height: 18px; }
+        .lang-btn { background: #f1f5f9; border: 1px solid #e2e8f0; height: 28px; padding: 0 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11.5px; color: #475569; font-family: inherit; }
+        .lang-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
         .main { margin-left: 250px; padding: 32px; }
-        .back-link { display: inline-flex; align-items: center; gap: 6px; color: #64748b; text-decoration: none; font-size: 13px; margin-bottom: 20px; }
-        .profile-header { background: linear-gradient(135deg, #0f172a 0%, #334155 100%); color: #fff; padding: 32px; border-radius: 16px; display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
-        .profile-photo { width: 100px; height: 100px; border-radius: 50%; background: #f1f5f9; object-fit: cover; flex-shrink: 0; border: 4px solid rgba(255,255,255,0.2); }
-        .profile-photo-placeholder { width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; border: 4px solid rgba(255,255,255,0.2); flex-shrink: 0; }
-        .profile-header h1 { font-size: 26px; margin-bottom: 6px; }
-        .profile-header .id-badge { display: inline-block; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; }
-        .stage-track-badge {
-            display: inline-block;
-            background: #2563eb;
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-top: 8px;
-        }
-        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
-        .card { background: #fff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
-        .card h3 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
-        .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #f8fafc; }
-        .info-row:last-child { border-bottom: none; }
-        .info-row .label { color: #64748b; font-size: 13px; width: 140px; flex-shrink: 0; }
-        .info-row .value { font-weight: 500; font-size: 14px; }
-        .stat-box { background: #f8fafc; padding: 18px; border-radius: 10px; text-align: center; }
-        .stat-box .num { font-size: 32px; font-weight: 700; color: #0f172a; line-height: 1; }
-        .stat-box .lbl { font-size: 12px; color: #64748b; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .car-card { padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 12px; }
-        .car-card.blacklisted { background: #fef2f2; border-color: #fecaca; }
-        .car-card .plate { display: inline-block; font-family: monospace; background: #0f172a; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 14px; letter-spacing: 1px; margin-bottom: 10px; }
-        .car-card.blacklisted .plate { background: #dc2626; }
-        .car-card .model { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-        .car-card .color { font-size: 13px; color: #64748b; }
-        .empty-cars { text-align: center; padding: 20px; color: #94a3b8; font-size: 13px; }
-        .btn { background: #0f172a; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block; margin-right: 8px; }
-        .btn-edit { background: #2563eb; }
-        .btn-danger { background: #dc2626; }
-        .actions { margin-top: 20px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: #64748b; text-decoration: none; font-size: 13.5px; margin-bottom: 16px; }
+        .back-link:hover { color: #0f172a; }
+        .profile-card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 32px; margin-bottom: 24px; display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+        .profile-photo { width: 130px; height: 130px; border-radius: 14px; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 48px; overflow: hidden; flex-shrink: 0; }
+        .profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-info { flex: 1; min-width: 240px; }
+        .profile-name { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .badge { display: inline-block; padding: 5px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; }
+        .badge-id { background: #f1f5f9; color: #0f172a; font-family: monospace; }
+        .badge-stage { background: #dbeafe; color: #1e40af; }
+        .badge-class { background: #fef3c7; color: #92400e; }
+        .badge-track-programming { background: #dbeafe; color: #1e40af; }
+        .badge-track-network { background: #dcfce7; color: #166534; }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
+        .info-item { font-size: 13.5px; }
+        .info-label { color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 3px; }
+        .info-value { color: #0f172a; font-weight: 500; }
+        .actions-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+        .btn-edit { background: #eff6ff; color: #2563eb; text-decoration: none; padding: 11px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 600; border: 1px solid #dbeafe; }
+        .btn-edit:hover { background: #dbeafe; }
+        .btn-blacklist { background: #fef2f2; color: #dc2626; text-decoration: none; padding: 11px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 600; border: 1px solid #fee2e2; }
+        .btn-blacklist:hover { background: #fee2e2; }
+        .section-card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 24px; }
+        .section-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+        .section-card h3 .count { font-family: monospace; background: #f1f5f9; padding: 2px 10px; border-radius: 6px; font-size: 12px; color: #64748b; }
+        .car-item { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 14px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .car-item.blocked { background: #fef2f2; border-color: #fecaca; }
+        .car-photo { width: 110px; height: 80px; border-radius: 8px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+        .car-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .car-details { flex: 1; min-width: 200px; }
+        .plate-display { font-family: monospace; font-size: 18px; font-weight: 700; background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 8px; letter-spacing: 2px; display: inline-block; margin-bottom: 10px; }
+        .plate-display.blocked { background: #dc2626; }
+        .car-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 13px; }
+        .car-meta .lbl { color: #64748b; font-size: 11.5px; text-transform: uppercase; font-weight: 600; }
+        .car-meta .val { color: #0f172a; }
+        .blocked-note { background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; margin-top: 10px; border: 1px solid #fecaca; }
+        .empty-state { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+
+        /* DARK MODE */
+        html.dark-mode, html.dark-mode body { background: #0f172a !important; color: #f1f5f9 !important; }
+        html.dark-mode .sidebar { background: #1e293b !important; border-right-color: #334155 !important; }
+        html.dark-mode .sidebar-header { border-bottom-color: #334155 !important; }
+        html.dark-mode .sidebar-header .name { color: #f1f5f9 !important; }
+        html.dark-mode .sidebar-header .name span { color: #94a3b8 !important; }
+        html.dark-mode .sidebar nav a { color: #cbd5e1 !important; }
+        html.dark-mode .sidebar nav a:hover { background: #334155 !important; color: #fff !important; }
+        html.dark-mode .sidebar nav a.active { background: #3b82f6 !important; color: #fff !important; }
+        html.dark-mode .nav-label { color: #64748b !important; }
+        html.dark-mode .main { background: #0f172a !important; }
+        html.dark-mode .back-link { color: #94a3b8 !important; }
+        html.dark-mode .back-link:hover { color: #fff !important; }
+        html.dark-mode .profile-card { background: #1e293b !important; border-color: #334155 !important; color: #f1f5f9 !important; }
+        html.dark-mode .profile-name { color: #f1f5f9 !important; }
+        html.dark-mode .profile-photo { background: #0f172a !important; color: #f1f5f9 !important; }
+        html.dark-mode .badge-id { background: #334155 !important; color: #e2e8f0 !important; }
+        html.dark-mode .badge-stage { background: #1e40af !important; color: #dbeafe !important; }
+        html.dark-mode .badge-class { background: #78350f !important; color: #fef3c7 !important; }
+        html.dark-mode .badge-track-programming { background: #1e40af !important; color: #dbeafe !important; }
+        html.dark-mode .badge-track-network { background: #166534 !important; color: #dcfce7 !important; }
+        html.dark-mode .info-label { color: #94a3b8 !important; }
+        html.dark-mode .info-value { color: #f1f5f9 !important; }
+        html.dark-mode .section-card { background: #1e293b !important; border-color: #334155 !important; color: #f1f5f9 !important; }
+        html.dark-mode .section-card h3 { color: #f1f5f9 !important; }
+        html.dark-mode .section-card h3 .count { background: #334155 !important; color: #cbd5e1 !important; }
+        html.dark-mode .car-item { background: #0f172a !important; border-color: #334155 !important; color: #f1f5f9 !important; }
+        html.dark-mode .car-item.blocked { background: #7f1d1d !important; border-color: #991b1b !important; }
+        html.dark-mode .car-photo { background: #1e293b !important; }
+        html.dark-mode .car-meta .lbl { color: #94a3b8 !important; }
+        html.dark-mode .car-meta .val { color: #f1f5f9 !important; }
+        html.dark-mode .blocked-note { background: #7f1d1d !important; color: #fecaca !important; border-color: #991b1b !important; }
+        html.dark-mode .empty-state { color: #94a3b8 !important; }
+        html.dark-mode .lang-btn { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
+        html.dark-mode .lang-btn.active { background: #3b82f6 !important; color: #fff !important; border-color: #3b82f6 !important; }
+        html.dark-mode button[onclick*="toggleTheme"] { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
     </style>
     <script>
     (function() {
         try {
             var saved = localStorage.getItem('theme') || 'light';
             if (saved === 'dark') document.documentElement.classList.add('dark-mode');
+            var lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
         } catch(e) {}
     })();
     </script>
@@ -112,116 +142,133 @@ function isPlateBlacklisted($conn, $plate) {
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="logo.png" alt="Logo">
-            <div class="name">Sardam Institute<span><?php echo $is_admin ? 'Computer Sciences' : 'Guard Panel'; ?></span></div>
+            <div class="name">Sardam Institute<span data-en="Computer Sciences" data-ku="زانستەکانی کۆمپیوتەر" data-ar="علوم الحاسوب">Computer Sciences</span></div>
         </div>
-        <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Theme</span>
-            <button onclick="toggleTheme()" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            </button>
+        <div style="padding: 10px 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase;" data-en="Lang" data-ku="زمان" data-ar="لغة">Lang</span>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button onclick="setLanguage('en')" class="lang-btn">English</button>
+                <button onclick="setLanguage('ku')" class="lang-btn">کوردی</button>
+                <button onclick="setLanguage('ar')" class="lang-btn">عربي</button>
+                <button onclick="toggleTheme()" title="Theme" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+            </div>
         </div>
         <nav>
-            <div class="nav-label">Main</div>
-            <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
+            <div class="nav-label" data-en="Main" data-ku="سەرەکی" data-ar="الرئيسية">Main</div>
+            <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> <span data-en="Dashboard" data-ku="داشبۆرد" data-ar="لوحة التحكم">Dashboard</span></a>
             <?php if ($is_admin): ?>
-                <div class="nav-label">Management</div>
-                <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
-                <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
-                <a href="view_students.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
-                <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
-<a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
+                <div class="nav-label" data-en="Management" data-ku="بەڕێوەبردن" data-ar="الإدارة">Management</div>
+                <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> <span data-en="Add Student" data-ku="زیادکردنی قوتابی" data-ar="إضافة طالب">Add Student</span></a>
+                <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> <span data-en="Bulk Import" data-ku="هاوردەکردنی بەکۆمەڵ" data-ar="استيراد جماعي">Bulk Import</span></a>
+                <a href="view_students.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> <span data-en="All Students" data-ku="هەموو قوتابیان" data-ar="جميع الطلاب">All Students</span></a>
+                <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> <span data-en="Bulk Delete" data-ku="سڕینەوەی بەکۆمەڵ" data-ar="حذف جماعي">Bulk Delete</span></a>
+                <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> <span data-en="Promote Students" data-ku="بەرزکردنەوەی قوتابیان" data-ar="ترقية الطلاب">Promote Students</span></a>
             <?php endif; ?>
-            <div class="nav-label">Operations</div>
-            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
-            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
+            <div class="nav-label" data-en="Operations" data-ku="کارەکان" data-ar="العمليات">Operations</div>
+            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> <span data-en="Search" data-ku="گەڕان" data-ar="البحث">Search</span></a>
+            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> <span data-en="Blacklist" data-ku="ڕەشلیست" data-ar="القائمة السوداء">Blacklist</span></a>
+            <div class="nav-label" data-en="Account" data-ku="هەژمار" data-ar="الحساب">Account</div>
             <?php if ($is_admin): ?>
-                <div class="nav-label">Account</div>
-                <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
-                <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Change Password</a>
+                <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> <span data-en="Manage Users" data-ku="بەڕێوەبردنی بەکارهێنەران" data-ar="إدارة المستخدمين">Manage Users</span></a>
             <?php endif; ?>
-            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sign Out</a>
+            <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> <span data-en="Change Password" data-ku="گۆڕینی وشەی نهێنی" data-ar="تغيير كلمة المرور">Change Password</span></a>
+            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> <span data-en="Sign Out" data-ku="چوونەدەرەوە" data-ar="تسجيل الخروج">Sign Out</span></a>
         </nav>
     </aside>
     <main class="main">
-        <a href="view_students.php" class="back-link">&larr; Back to All Students</a>
+        <a href="view_students.php" class="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            <span data-en="Back to All Students" data-ku="گەڕانەوە بۆ هەموو قوتابیان" data-ar="العودة إلى جميع الطلاب">Back to All Students</span>
+        </a>
 
-        <div class="profile-header">
-            <?php if ($student['photo'] && file_exists($student['photo'])): ?>
-                <img src="<?php echo htmlspecialchars($student['photo']); ?>" class="profile-photo">
-            <?php else: ?>
-                <div class="profile-photo-placeholder"><?php echo strtoupper(substr($student['full_name'], 0, 1)); ?></div>
-            <?php endif; ?>
-            <div>
-                <h1><?php echo htmlspecialchars($student['full_name']); ?></h1>
-                <span class="id-badge"><?php echo htmlspecialchars($student['student_id']); ?></span>
-                <div class="stage-track-badge">
-                    Stage <?php echo intval($student['stage']); ?>
-                    • Class <?php echo htmlspecialchars($student['class']); ?>
+        <div class="profile-card">
+            <div class="profile-photo">
+                <?php if (!empty($student['photo']) && file_exists($student['photo'])): ?>
+                    <img src="<?php echo htmlspecialchars($student['photo']); ?>" alt="">
+                <?php else: ?>
+                    <?php echo strtoupper(substr($student['full_name'], 0, 1)); ?>
+                <?php endif; ?>
+            </div>
+            <div class="profile-info">
+                <div class="profile-name"><?php echo htmlspecialchars($student['full_name']); ?></div>
+                <div class="badges">
+                    <span class="badge badge-id"><?php echo htmlspecialchars($student['student_id']); ?></span>
+                    <span class="badge badge-stage">Stage <?php echo intval($student['stage']); ?></span>
+                    <span class="badge badge-class">Class <?php echo htmlspecialchars($student['class']); ?></span>
                     <?php if (($student['stage'] == 4 || $student['stage'] == 5) && $student['track']): ?>
-                        • <?php echo htmlspecialchars($student['track']); ?>
+                        <span class="badge badge-track-<?php echo strtolower($student['track']); ?>"><?php echo htmlspecialchars($student['track']); ?></span>
                     <?php endif; ?>
                 </div>
-            </div>
-        </div>
-
-        <div class="grid">
-            <div>
-                <div class="card">
-                    <h3>Contact Information</h3>
-                    <div class="info-row"><div class="label">Student ID</div><div class="value"><?php echo htmlspecialchars($student['student_id']); ?></div></div>
-                    <div class="info-row"><div class="label">Full Name</div><div class="value"><?php echo htmlspecialchars($student['full_name']); ?></div></div>
-                    <div class="info-row"><div class="label">Stage</div><div class="value">Stage <?php echo intval($student['stage']); ?></div></div>
-                    <div class="info-row"><div class="label">Class</div><div class="value">Class <?php echo htmlspecialchars($student['class']); ?></div></div>
-                    <?php if ($student['stage'] == 4 || $student['stage'] == 5): ?>
-                        <div class="info-row"><div class="label">Field</div><div class="value"><?php echo htmlspecialchars($student['track'] ?: '—'); ?></div></div>
-                    <?php endif; ?>
-                    <div class="info-row"><div class="label">Phone</div><div class="value"><?php echo htmlspecialchars($student['phone'] ?: '—'); ?></div></div>
-                    <div class="info-row"><div class="label">Registered</div><div class="value"><?php echo date('M d, Y', strtotime($student['created_at'])); ?></div></div>
-                </div>
-
-                <div class="card">
-                    <h3>Registered Vehicles (<?php echo $car_count; ?>)</h3>
-                    <?php if ($car_count === 0): ?>
-                        <div class="empty-cars">No vehicles registered.</div>
-                    <?php else: ?>
-                        <?php foreach ($cars_array as $car): 
-                            $blocked = isPlateBlacklisted($conn, $car['plate_number']);
-                        ?>
-                            <div class="car-card <?php echo $blocked ? 'blacklisted' : ''; ?>">
-                                <div class="plate"><?php echo htmlspecialchars($car['plate_number']); ?></div>
-                                <div class="model"><?php echo htmlspecialchars($car['car_model'] ?: 'Unknown model'); ?></div>
-                                <div class="color"><?php echo htmlspecialchars($car['color'] ?: 'Unknown color'); ?></div>
-                                <?php if ($blocked): ?>
-                                    <div style="margin-top: 8px; font-size: 12px; color: #dc2626; font-weight: 600;">BLACKLISTED — <?php echo htmlspecialchars($blocked); ?></div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div>
-                <div class="card">
-                    <h3>Statistics</h3>
-                    <div class="stat-box">
-                        <div class="num"><?php echo $car_count; ?></div>
-                        <div class="lbl">Vehicles</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label" data-en="Phone" data-ku="تەلەفۆن" data-ar="الهاتف">Phone</div>
+                        <div class="info-value"><?php echo htmlspecialchars($student['phone'] ?: '—'); ?></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label" data-en="Registered" data-ku="تۆمارکراوە" data-ar="مسجل">Registered</div>
+                        <div class="info-value"><?php echo date('M d, Y', strtotime($student['created_at'])); ?></div>
                     </div>
                 </div>
-
                 <?php if ($is_admin): ?>
-                <div class="card">
-                    <h3>Actions</h3>
-                    <div class="actions">
-                        <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="btn btn-edit">Edit</a>
-                        <a href="delete_student.php?id=<?php echo $student['id']; ?>" class="btn btn-danger" onclick="return confirm('Delete this student?')">Delete</a>
+                    <div class="actions-bar">
+                        <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="btn-edit" data-en="Edit Student" data-ku="دەستکاری قوتابی" data-ar="تعديل الطالب">Edit Student</a>
+                        <a href="blacklist.php?q=<?php echo urlencode($student['full_name']); ?>" class="btn-blacklist" data-en="Manage Blacklist" data-ku="بەڕێوەبردنی ڕەشلیست" data-ar="إدارة القائمة السوداء">Manage Blacklist</a>
                     </div>
-                </div>
                 <?php endif; ?>
             </div>
         </div>
+
+        <div class="section-card">
+            <h3>
+                <span data-en="Registered Cars" data-ku="ئۆتۆمبێلە تۆمارکراوەکان" data-ar="السيارات المسجلة">Registered Cars</span>
+                <span class="count"><?php echo $cars->num_rows; ?></span>
+            </h3>
+
+            <?php if ($cars->num_rows === 0): ?>
+                <div class="empty-state" data-en="No cars registered for this student." data-ku="هیچ ئۆتۆمبێلێک بۆ ئەم قوتابییە تۆمار نەکراوە." data-ar="لا سيارات مسجلة لهذا الطالب.">No cars registered for this student.</div>
+            <?php else: ?>
+                <?php while ($car = $cars->fetch_assoc()): 
+                    $blocked = isBlocked($conn, $car['plate_number']);
+                ?>
+                    <div class="car-item <?php echo $blocked ? 'blocked' : ''; ?>">
+                        <div class="car-photo">
+                            <?php if (!empty($car['car_photo']) && file_exists($car['car_photo'])): ?>
+                                <img src="<?php echo htmlspecialchars($car['car_photo']); ?>" alt="">
+                            <?php else: ?>
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M5 17h14M5 17v-6l2-5h10l2 5v6"/><circle cx="7.5" cy="14.5" r="1.5"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>
+                            <?php endif; ?>
+                        </div>
+                        <div class="car-details">
+                            <div class="plate-display <?php echo $blocked ? 'blocked' : ''; ?>"><?php echo htmlspecialchars($car['plate_number']); ?></div>
+                            <div class="car-meta">
+                                <div>
+                                    <div class="lbl" data-en="Model" data-ku="مۆدێل" data-ar="الموديل">Model</div>
+                                    <div class="val"><?php echo htmlspecialchars($car['car_model'] ?: '—'); ?></div>
+                                </div>
+                                <div>
+                                    <div class="lbl" data-en="Color" data-ku="ڕەنگ" data-ar="اللون">Color</div>
+                                    <div class="val"><?php echo htmlspecialchars($car['color'] ?: '—'); ?></div>
+                                </div>
+                            </div>
+                            <?php if ($blocked): ?>
+                                <div class="blocked-note">
+                                    <span data-en="BLACKLISTED" data-ku="ڕەشلیستکراوە" data-ar="محظورة">BLACKLISTED</span> —
+                                    <?php echo htmlspecialchars($blocked['reason']); ?>
+                                    <?php if ($blocked['duration_label']): ?>
+                                        (<?php echo htmlspecialchars($blocked['duration_label']); ?>)
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endwhile; ?>
+            <?php endif; ?>
+        </div>
     </main>
 
+    <script src="language.js?v=99"></script>
     <script>
     function toggleTheme() {
         var isDark = document.documentElement.classList.toggle('dark-mode');

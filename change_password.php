@@ -1,41 +1,36 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
-if ($_SESSION['role'] != 'admin') { header("Location: guard_dashboard.php"); exit; }
 include 'db.php';
 
+$is_admin = ($_SESSION['role'] == 'admin');
 $success = "";
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $current = $_POST['current_password'];
-    $new = $_POST['new_password'];
-    $confirm = $_POST['confirm_password'];
-
-    if (empty($current) || empty($new) || empty($confirm)) {
-        $error = "All fields are required.";
-    } elseif ($new !== $confirm) {
-        $error = "New password and confirm password do not match.";
-    } elseif (strlen($new) < 6) {
-        $error = "New password must be at least 6 characters.";
-    } else {
+    $current = $_POST['current_password'] ?? '';
+    $new = $_POST['new_password'] ?? '';
+    $confirm = $_POST['confirm_password'] ?? '';
+    if (empty($current) || empty($new) || empty($confirm)) $error = "All fields are required.";
+    elseif ($new !== $confirm) $error = "New passwords do not match.";
+    elseif (strlen($new) < 6) $error = "New password must be at least 6 characters.";
+    else {
         $stmt = $conn->prepare("SELECT password FROM users WHERE id = ?");
         $stmt->bind_param("i", $_SESSION['user_id']);
         $stmt->execute();
-        $user = $stmt->get_result()->fetch_assoc();
-
-        if (!$user) {
-            $error = "User not found.";
-        } elseif ($user['password'] !== $current) {
-            $error = "Current password is incorrect.";
-        } else {
+        $row = $stmt->get_result()->fetch_assoc();
+        $valid = false;
+        if ($row) {
+            if (password_verify($current, $row['password'])) $valid = true;
+            elseif ($current === $row['password']) $valid = true;
+        }
+        if (!$valid) $error = "Current password is incorrect.";
+        else {
+            $hashed = password_hash($new, PASSWORD_DEFAULT);
             $upd = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-            $upd->bind_param("si", $new, $_SESSION['user_id']);
-            if ($upd->execute()) {
-                $success = "Password changed successfully!";
-            } else {
-                $error = "Failed to update password.";
-            }
+            $upd->bind_param("si", $hashed, $_SESSION['user_id']);
+            if ($upd->execute()) $success = "Password changed successfully.";
+            else $error = "Error updating password.";
         }
     }
 }
@@ -45,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <title>Change Password - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="theme.css?v=99">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
@@ -60,30 +55,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .sidebar nav a:hover { background: #f1f5f9; color: #0f172a; }
         .sidebar nav a.active { background: #0f172a; color: #fff; }
         .sidebar nav a svg { width: 18px; height: 18px; }
+        .lang-btn { background: #f1f5f9; border: 1px solid #e2e8f0; height: 28px; padding: 0 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11.5px; color: #475569; font-family: inherit; }
+        .lang-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
         .main { margin-left: 250px; padding: 32px; }
         .page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
         .page-sub { color: #64748b; font-size: 14px; margin-bottom: 24px; }
-        .card { background: #fff; padding: 32px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 520px; }
-        .user-info { display: flex; align-items: center; gap: 14px; background: #f8fafc; padding: 16px 20px; border-radius: 10px; margin-bottom: 24px; border: 1px solid #e2e8f0; }
-        .user-avatar { width: 48px; height: 48px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 18px; }
-        .user-meta .username { font-weight: 600; font-size: 15px; }
-        .user-meta .role { font-size: 12.5px; color: #64748b; text-transform: capitalize; }
-        .form-group { margin-bottom: 18px; }
-        label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #334155; }
-        input[type=password] { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; }
-        input[type=password]:focus { outline: none; border-color: #0f172a; }
-        .btn { background: #0f172a; color: #fff; padding: 14px 28px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px; }
-        .btn:hover { background: #1e293b; }
         .alert { padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
         .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+        .card { background: #fff; padding: 32px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 500px; }
+        .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+        .card .sub { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #334155; }
+        input[type=password] { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; }
+        input:focus { outline: none; border-color: #0f172a; }
+        .hint { font-size: 11.5px; color: #94a3b8; margin-top: 4px; }
+        .btn { background: #0f172a; color: #fff; padding: 14px 28px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+        .btn:hover { background: #1e293b; }
+
+        /* ============================================
+           DARK MODE — FULL FIX
+           ============================================ */
+        html.dark-mode { background: #0f172a !important; }
+        html.dark-mode body { background: #0f172a !important; color: #f1f5f9 !important; }
+        html.dark-mode .sidebar { background: #1e293b !important; border-right-color: #334155 !important; }
+        html.dark-mode .sidebar-header { border-bottom-color: #334155 !important; }
+        html.dark-mode .sidebar-header .name { color: #f1f5f9 !important; }
+        html.dark-mode .sidebar-header .name span { color: #94a3b8 !important; }
+        html.dark-mode .sidebar nav a { color: #cbd5e1 !important; }
+        html.dark-mode .sidebar nav a:hover { background: #334155 !important; color: #fff !important; }
+        html.dark-mode .sidebar nav a.active { background: #3b82f6 !important; color: #fff !important; }
+        html.dark-mode .nav-label { color: #64748b !important; }
+        html.dark-mode .main { background: #0f172a !important; }
+        html.dark-mode .page-title { color: #f1f5f9 !important; }
+        html.dark-mode .page-sub { color: #94a3b8 !important; }
+        html.dark-mode .card { background: #1e293b !important; border-color: #334155 !important; color: #f1f5f9 !important; }
+        html.dark-mode .card h3 { color: #f1f5f9 !important; }
+        html.dark-mode .card .sub { color: #94a3b8 !important; }
+        html.dark-mode label { color: #cbd5e1 !important; }
+        html.dark-mode input[type=password] { background: #0f172a !important; border-color: #475569 !important; color: #f1f5f9 !important; }
+        html.dark-mode input::placeholder { color: #64748b !important; }
+        html.dark-mode .hint { color: #94a3b8 !important; }
+        html.dark-mode .btn { background: #3b82f6 !important; color: #fff !important; }
+        html.dark-mode .btn:hover { background: #2563eb !important; }
+        html.dark-mode .alert-success { background: #14532d !important; color: #bbf7d0 !important; border-color: #166534 !important; }
+        html.dark-mode .alert-error { background: #7f1d1d !important; color: #fecaca !important; border-color: #991b1b !important; }
+        html.dark-mode .lang-btn { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
+        html.dark-mode .lang-btn:hover { background: #475569 !important; }
+        html.dark-mode .lang-btn.active { background: #3b82f6 !important; color: #fff !important; border-color: #3b82f6 !important; }
+        html.dark-mode button[onclick*="toggleTheme"] { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
     </style>
     <script>
     (function() {
         try {
             var saved = localStorage.getItem('theme') || 'light';
             if (saved === 'dark') document.documentElement.classList.add('dark-mode');
+            var lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
         } catch(e) {}
     })();
     </script>
@@ -92,66 +121,72 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="logo.png" alt="Logo">
-            <div class="name">Sardam Institute<span>Computer Sciences</span></div>
+            <div class="name">Sardam Institute<span data-en="Computer Sciences" data-ku="زانستەکانی کۆمپیوتەر" data-ar="علوم الحاسوب">Computer Sciences</span></div>
         </div>
-        <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Theme</span>
-            <button onclick="toggleTheme()" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            </button>
+        <div style="padding: 10px 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase;" data-en="Lang" data-ku="زمان" data-ar="لغة">Lang</span>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button onclick="setLanguage('en')" class="lang-btn">English</button>
+                <button onclick="setLanguage('ku')" class="lang-btn">کوردی</button>
+                <button onclick="setLanguage('ar')" class="lang-btn">عربي</button>
+                <button onclick="toggleTheme()" title="Theme" style="background: #f1f5f9; border: 1px solid #e2e8f0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+            </div>
         </div>
         <nav>
-            <div class="nav-label">Main</div>
-            <a href="dashboard.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Dashboard</a>
-            <div class="nav-label">Management</div>
-            <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Add Student</a>
-            <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Bulk Import</a>
-            <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> All Students</a>
-            <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Bulk Delete</a>
-<a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Promote Students</a>
-            <div class="nav-label">Operations</div>
-            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> Search</a>
-            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Blacklist</a>
-            <div class="nav-label">Account</div>
-            <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Manage Users</a>
-            <a href="change_password.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Change Password</a>
-            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> Sign Out</a>
+            <div class="nav-label" data-en="Main" data-ku="سەرەکی" data-ar="الرئيسية">Main</div>
+            <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> <span data-en="Dashboard" data-ku="داشبۆرد" data-ar="لوحة التحكم">Dashboard</span></a>
+            <?php if ($is_admin): ?>
+                <div class="nav-label" data-en="Management" data-ku="بەڕێوەبردن" data-ar="الإدارة">Management</div>
+                <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> <span data-en="Add Student" data-ku="زیادکردنی قوتابی" data-ar="إضافة طالب">Add Student</span></a>
+                <a href="bulk_import.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> <span data-en="Bulk Import" data-ku="هاوردەکردنی بەکۆمەڵ" data-ar="استيراد جماعي">Bulk Import</span></a>
+                <a href="view_students.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/></svg> <span data-en="All Students" data-ku="هەموو قوتابیان" data-ar="جميع الطلاب">All Students</span></a>
+                <a href="bulk_delete.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> <span data-en="Bulk Delete" data-ku="سڕینەوەی بەکۆمەڵ" data-ar="حذف جماعي">Bulk Delete</span></a>
+                <a href="promote.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> <span data-en="Promote Students" data-ku="بەرزکردنەوەی قوتابیان" data-ar="ترقية الطلاب">Promote Students</span></a>
+            <?php endif; ?>
+            <div class="nav-label" data-en="Operations" data-ku="کارەکان" data-ar="العمليات">Operations</div>
+            <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> <span data-en="Search" data-ku="گەڕان" data-ar="البحث">Search</span></a>
+            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> <span data-en="Blacklist" data-ku="ڕەشلیست" data-ar="القائمة السوداء">Blacklist</span></a>
+            <div class="nav-label" data-en="Account" data-ku="هەژمار" data-ar="الحساب">Account</div>
+            <?php if ($is_admin): ?>
+                <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> <span data-en="Manage Users" data-ku="بەڕێوەبردنی بەکارهێنەران" data-ar="إدارة المستخدمين">Manage Users</span></a>
+            <?php endif; ?>
+            <a href="change_password.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> <span data-en="Change Password" data-ku="گۆڕینی وشەی نهێنی" data-ar="تغيير كلمة المرور">Change Password</span></a>
+            <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> <span data-en="Sign Out" data-ku="چوونەدەرەوە" data-ar="تسجيل الخروج">Sign Out</span></a>
         </nav>
     </aside>
     <main class="main">
-        <h1 class="page-title">Change Password</h1>
-        <p class="page-sub">Update your account password</p>
+        <h1 class="page-title" data-en="Change Password" data-ku="گۆڕینی وشەی نهێنی" data-ar="تغيير كلمة المرور">Change Password</h1>
+        <p class="page-sub" data-en="Update your account password" data-ku="نوێکردنەوەی وشەی نهێنی هەژمارەکەت" data-ar="تحديث كلمة مرور حسابك">Update your account password</p>
+
+        <?php if ($success) echo "<div class='alert alert-success'>" . htmlspecialchars($success) . "</div>"; ?>
+        <?php if ($error) echo "<div class='alert alert-error'>" . htmlspecialchars($error) . "</div>"; ?>
 
         <div class="card">
-            <div class="user-info">
-                <div class="user-avatar"><?php echo strtoupper(substr($_SESSION['username'], 0, 1)); ?></div>
-                <div class="user-meta">
-                    <div class="username"><?php echo htmlspecialchars($_SESSION['username']); ?></div>
-                    <div class="role"><?php echo htmlspecialchars($_SESSION['role']); ?></div>
-                </div>
-            </div>
-
-            <?php if ($success) echo "<div class='alert alert-success'>$success</div>"; ?>
-            <?php if ($error) echo "<div class='alert alert-error'>$error</div>"; ?>
+            <h3 data-en="Security" data-ku="ئاسایش" data-ar="الأمان">Security</h3>
+            <p class="sub" data-en="Choose a strong password with at least 6 characters." data-ku="وشەی نهێنییەکی بەهێز هەڵبژێرە کە کەمترین 6 پیت بێت." data-ar="اختر كلمة مرور قوية لا تقل عن 6 أحرف.">Choose a strong password with at least 6 characters.</p>
 
             <form method="POST">
                 <div class="form-group">
-                    <label>Current Password</label>
-                    <input type="password" name="current_password" placeholder="Enter current password" required>
+                    <label data-en="Current Password" data-ku="وشەی نهێنی ئێستا" data-ar="كلمة المرور الحالية">Current Password</label>
+                    <input type="password" name="current_password" required autocomplete="current-password">
                 </div>
                 <div class="form-group">
-                    <label>New Password</label>
-                    <input type="password" name="new_password" placeholder="Minimum 6 characters" required minlength="6">
-                    <div class="hint">At least 6 characters long.</div>
+                    <label data-en="New Password" data-ku="وشەی نهێنی نوێ" data-ar="كلمة المرور الجديدة">New Password</label>
+                    <input type="password" name="new_password" required autocomplete="new-password" minlength="6">
+                    <div class="hint" data-en="Minimum 6 characters" data-ku="کەمترین 6 پیت" data-ar="الحد الأدنى 6 أحرف">Minimum 6 characters</div>
                 </div>
                 <div class="form-group">
-                    <label>Confirm New Password</label>
-                    <input type="password" name="confirm_password" placeholder="Re-enter new password" required minlength="6">
+                    <label data-en="Confirm New Password" data-ku="دڵنیاکردنەوەی وشەی نهێنی نوێ" data-ar="تأكيد كلمة المرور الجديدة">Confirm New Password</label>
+                    <input type="password" name="confirm_password" required autocomplete="new-password" minlength="6">
                 </div>
-                <button type="submit" class="btn">Update Password</button>
+                <button type="submit" class="btn" data-en="Change Password" data-ku="گۆڕینی وشەی نهێنی" data-ar="تغيير كلمة المرور">Change Password</button>
             </form>
         </div>
     </main>
+
+    <script src="language.js?v=99"></script>
     <script>
     function toggleTheme() {
         var isDark = document.documentElement.classList.toggle('dark-mode');
