@@ -9,21 +9,16 @@ $user = "root";
 $pass = "";
 $dbname = "campus_security";
 
-// Suppress warnings — we'll handle them ourselves
 mysqli_report(MYSQLI_REPORT_OFF);
 
-// Connect to MySQL
 $conn = @new mysqli($host, $user, $pass);
 
-// If connection fails completely
 if ($conn->connect_error) {
     die("MySQL is not running. Please start XAMPP (Apache + MySQL) and refresh this page.");
 }
 
-// Check if database exists
 $dbExists = $conn->query("SHOW DATABASES LIKE '$dbname'");
 if (!$dbExists || $dbExists->num_rows == 0) {
-    // Database doesn't exist → redirect to setup
     $currentFile = basename($_SERVER['PHP_SELF']);
     if ($currentFile != 'setup.php') {
         header("Location: setup.php");
@@ -31,7 +26,6 @@ if (!$dbExists || $dbExists->num_rows == 0) {
     }
 }
 
-// Select the database
 if (!$conn->select_db($dbname)) {
     $currentFile = basename($_SERVER['PHP_SELF']);
     if ($currentFile != 'setup.php') {
@@ -40,7 +34,6 @@ if (!$conn->select_db($dbname)) {
     }
 }
 
-// Check if required tables exist
 $requiredTables = ['users', 'students', 'cars', 'blacklist'];
 $missingTables = [];
 foreach ($requiredTables as $table) {
@@ -50,7 +43,6 @@ foreach ($requiredTables as $table) {
     }
 }
 
-// Check if students table has required columns
 $missingColumns = [];
 if (!in_array('students', $missingTables)) {
     $requiredCols = ['stage', 'class', 'track'];
@@ -62,7 +54,6 @@ if (!in_array('students', $missingTables)) {
     }
 }
 
-// Check blacklist columns
 $blacklistCols = ['expires_at', 'added_by', 'duration_label'];
 $missingBlacklistCols = [];
 if (!in_array('blacklist', $missingTables)) {
@@ -74,7 +65,6 @@ if (!in_array('blacklist', $missingTables)) {
     }
 }
 
-// If anything is missing → redirect to setup
 if (!empty($missingTables) || !empty($missingColumns) || !empty($missingBlacklistCols)) {
     $currentFile = basename($_SERVER['PHP_SELF']);
     if ($currentFile != 'setup.php') {
@@ -83,6 +73,5 @@ if (!empty($missingTables) || !empty($missingColumns) || !empty($missingBlacklis
     }
 }
 
-// Enable error reporting (after all checks pass)
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 ?>
