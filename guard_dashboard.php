@@ -84,17 +84,18 @@ include 'db.php';
         </div>
         <nav>
             <div class="nav-label" data-en="Main" data-ku="سەرەکی" data-ar="الرئيسية">Main</div>
-            <a href="guard_dashboard.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> <span data-en="Dashboard" data-ku="داشبۆرد" data-ar="لوحة التحكم">Dashboard</span></a>
+            <a href="guard_dashboard.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> <span data-en="Dashboard" data-ku="پەڕەی کۆنترۆڵ" data-ar="لوحة التحكم">Dashboard</span></a>
             <div class="nav-label" data-en="Operations" data-ku="کارەکان" data-ar="العمليات">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> <span data-en="Search" data-ku="گەڕان" data-ar="البحث">Search</span></a>
-            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> <span data-en="Blacklist" data-ku="ڕەشلیست" data-ar="القائمة السوداء">Blacklist</span></a>
+            <a href="blacklist.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> <span data-en="Blacklist" data-ku="لیستی قەدەغە کراوان" data-ar="القائمة السوداء">Blacklist</span></a>
             <div class="nav-label" data-en="Account" data-ku="هەژمار" data-ar="الحساب">Account</div>
+            <a href="backup.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> <span data-en="Backup" data-ku="پاشەکەوت" data-ar="نسخ احتياطي">Backup</span></a>
             <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> <span data-en="Sign Out" data-ku="چوونەدەرەوە" data-ar="تسجيل الخروج">Sign Out</span></a>
         </nav>
     </aside>
     <main class="main">
         <div class="topbar">
-            <h1 data-en="Guard Dashboard" data-ku="داشبۆردی پاسەوان" data-ar="لوحة الحارس">Guard Dashboard</h1>
+            <h1 data-en="Guard Dashboard" data-ku="پەڕەی کۆنترۆڵی پاسەوان" data-ar="لوحة الحارس">Guard Dashboard</h1>
             <div class="user">
                 <div class="avatar"><?php echo strtoupper(substr($_SESSION['username'], 0, 1)); ?></div>
                 <div class="user-info">
@@ -122,7 +123,7 @@ include 'db.php';
                 </a>
                 <a href="blacklist.php" class="big-card">
                     <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg></div>
-                    <h2 data-en="View Blacklist" data-ku="بینینی ڕەشلیست" data-ar="عرض القائمة السوداء">View Blacklist</h2>
+                    <h2 data-en="View Blacklist" data-ku="بینینی لیستی قەدەغە کراوان" data-ar="عرض القائمة السوداء">View Blacklist</h2>
                     <p data-en="Check banned vehicles." data-ku="پشکنین بۆ ئۆتۆمبێلە قەدەغەکراوەکان." data-ar="تحقق من المركبات المحظورة.">Check banned vehicles.</p>
                 </a>
                 <a href="logout.php" class="logout-card">

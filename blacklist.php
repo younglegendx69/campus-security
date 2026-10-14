@@ -263,7 +263,7 @@ function isPlateBlacklisted($conn, $plate) {
         </div>
         <nav>
             <div class="nav-label" data-en="Main" data-ku="سەرەکی" data-ar="الرئيسية">Main</div>
-            <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> <span data-en="Dashboard" data-ku="داشبۆرد" data-ar="لوحة التحكم">Dashboard</span></a>
+            <a href="<?php echo $is_admin ? 'dashboard.php' : 'guard_dashboard.php'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> <span data-en="Dashboard" data-ku="پەڕەی کۆنترۆڵ" data-ar="لوحة التحكم">Dashboard</span></a>
             <?php if ($is_admin): ?>
                 <div class="nav-label" data-en="Management" data-ku="بەڕێوەبردن" data-ar="الإدارة">Management</div>
                 <a href="add_student.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> <span data-en="Add Student" data-ku="زیادکردنی قوتابی" data-ar="إضافة طالب">Add Student</span></a>
@@ -274,21 +274,22 @@ function isPlateBlacklisted($conn, $plate) {
             <?php endif; ?>
             <div class="nav-label" data-en="Operations" data-ku="کارەکان" data-ar="العمليات">Operations</div>
             <a href="search_plate.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg> <span data-en="Search" data-ku="گەڕان" data-ar="البحث">Search</span></a>
-            <a href="blacklist.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> <span data-en="Blacklist" data-ku="ڕەشلیست" data-ar="القائمة السوداء">Blacklist</span></a>
+            <a href="blacklist.php" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> <span data-en="Blacklist" data-ku="لیستی قەدەغە کراوان" data-ar="القائمة السوداء">Blacklist</span></a>
             <?php if ($is_admin): ?>
                 <div class="nav-label" data-en="Account" data-ku="هەژمار" data-ar="الحساب">Account</div>
                 <a href="manage_users.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> <span data-en="Manage Users" data-ku="بەڕێوەبردنی بەکارهێنەران" data-ar="إدارة المستخدمين">Manage Users</span></a>
                 <a href="change_password.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> <span data-en="Change Password" data-ku="گۆڕینی وشەی نهێنی" data-ar="تغيير كلمة المرور">Change Password</span></a>
             <?php endif; ?>
+            <a href="backup.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> <span data-en="Backup" data-ku="پاشەکەوت" data-ar="نسخ احتياطي">Backup</span></a>
             <a href="logout.php"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> <span data-en="Sign Out" data-ku="چوونەدەرەوە" data-ar="تسجيل الخروج">Sign Out</span></a>
         </nav>
     </aside>
     <main class="main">
-        <h1 class="page-title" data-en="Blacklist Management" data-ku="بەڕێوەبردنی ڕەشلیست" data-ar="إدارة القائمة السوداء">Blacklist Management</h1>
-        <p class="page-sub" data-en="Search a student, then blacklist any car" data-ku="قوتابییەک بگەڕێ، پاشان ئۆتۆمبێلێک ڕەشلیست بکە" data-ar="ابحث عن طالب، ثم ضع أي سيارة في القائمة السوداء">Search a student, then blacklist any car</p>
+        <h1 class="page-title" data-en="Blacklist Management" data-ku="بەڕێوەبردنی لیستی قەدەغە کراوان" data-ar="إدارة القائمة السوداء">Blacklist Management</h1>
+        <p class="page-sub" data-en="Search a student, then blacklist any car" data-ku="قوتابییەک بگەڕێ، پاشان ئۆتۆمبێلێک لیستی قەدەغە کراوان بکە" data-ar="ابحث عن طالب، ثم ضع أي سيارة في القائمة السوداء">Search a student, then blacklist any car</p>
 
         <?php if ($is_guard): ?>
-            <div class="info-note" data-en="You can blacklist a car. Only an admin can remove plates." data-ku="دەتوانیت ئۆتۆمبێلێک ڕەشلیست بکەیت. تەنها ئەدمین دەتوانێت لابەرێت." data-ar="يمكنك وضع سيارة في القائمة السوداء. فقط المدير يمكنه الإزالة.">You can blacklist a car. Only an admin can remove plates.</div>
+            <div class="info-note" data-en="You can blacklist a car. Only an admin can remove plates." data-ku="دەتوانیت ئۆتۆمبێلێک لیستی قەدەغە کراوان بکەیت. تەنها ئەدمین دەتوانێت لابەرێت." data-ar="يمكنك وضع سيارة في القائمة السوداء. فقط المدير يمكنه الإزالة.">You can blacklist a car. Only an admin can remove plates.</div>
         <?php endif; ?>
 
         <?php if ($success) echo "<div class='alert alert-success'>$success</div>"; ?>
@@ -357,7 +358,7 @@ function isPlateBlacklisted($conn, $plate) {
                                                     <span class="badge-locked" data-en="Admin only" data-ku="تەنها ئەدمین" data-ar="المدير فقط">Admin only</span>
                                                 <?php endif; ?>
                                             <?php else: ?>
-                                                <button type="button" class="btn-blacklist" onclick="openBlacklistModal(<?php echo $car['id']; ?>, '<?php echo htmlspecialchars($car['plate_number'], ENT_QUOTES); ?>')" data-en="Blacklist" data-ku="ڕەشلیست" data-ar="حظر">Blacklist</button>
+                                                <button type="button" class="btn-blacklist" onclick="openBlacklistModal(<?php echo $car['id']; ?>, '<?php echo htmlspecialchars($car['plate_number'], ENT_QUOTES); ?>')" data-en="Blacklist" data-ku="لیستی قەدەغە کراوان" data-ar="حظر">Blacklist</button>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -370,9 +371,9 @@ function isPlateBlacklisted($conn, $plate) {
         <?php endif; ?>
 
         <div class="blacklist-card">
-            <h3><span data-en="Currently Blacklisted" data-ku="ڕەشلیستەکانی ئێستا" data-ar="القائمة السوداء حالياً">Currently Blacklisted</span> (<?php echo $list->num_rows; ?>)</h3>
+            <h3><span data-en="Currently Blacklisted" data-ku="لیستی قەدەغە کراوانەکانی ئێستا" data-ar="القائمة السوداء حالياً">Currently Blacklisted</span> (<?php echo $list->num_rows; ?>)</h3>
             <?php if ($list->num_rows === 0): ?>
-                <div class="empty" data-en="No blacklisted plates yet." data-ku="هیچ پلاکێکی ڕەشلیست نییە." data-ar="لا لوحات محظورة.">No blacklisted plates yet.</div>
+                <div class="empty" data-en="No blacklisted plates yet." data-ku="هیچ ڕەقەمێک قەدەغە نەکراوە " data-ar="لا لوحات محظورة.">No blacklisted plates yet.</div>
             <?php else: ?>
                 <table>
                     <tr>
@@ -411,7 +412,7 @@ function isPlateBlacklisted($conn, $plate) {
 
     <div class="modal-overlay" id="blacklistModal">
         <div class="modal">
-            <h3 data-en="Blacklist Vehicle" data-ku="ڕەشلیستکردنی ئۆتۆمبێل" data-ar="حظر السيارة">Blacklist Vehicle</h3>
+            <h3 data-en="Blacklist Vehicle" data-ku="لیستی قەدەغە کراوانکردنی ئۆتۆمبێل" data-ar="حظر السيارة">Blacklist Vehicle</h3>
             <div class="plate-preview" id="modal-plate"></div>
             <form method="POST">
                 <input type="hidden" name="blacklist_car" value="1">
@@ -433,7 +434,7 @@ function isPlateBlacklisted($conn, $plate) {
                 </select>
                 <div class="modal-actions">
                     <button type="button" class="modal-btn-cancel" onclick="closeBlacklistModal()" data-en="Cancel" data-ku="پاشگەزبوونەوە" data-ar="إلغاء">Cancel</button>
-                    <button type="submit" class="modal-btn-confirm" data-en="Blacklist" data-ku="ڕەشلیست" data-ar="حظر">Blacklist</button>
+                    <button type="submit" class="modal-btn-confirm" data-en="Blacklist" data-ku="لیستی قەدەغە کراوان" data-ar="حظر">Blacklist</button>
                 </div>
             </form>
         </div>
