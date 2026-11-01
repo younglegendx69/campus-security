@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         // 2. Check the password (works for hashes AND plain text)
         if (password_verify($password, $user['password'])) {
-            $password_matches = true; // It's a hash (like rawa)
+            $password_matches = true; // It's a hash
         } elseif ($password === $user['password']) {
             $password_matches = true; // It's plain text (like admin)
         }
@@ -67,14 +67,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         input:focus { outline: none; border-color: #0f172a; }
         button.submit { width: 100%; padding: 14px; background: #0f172a; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; }
         button.submit:hover { background: #1e293b; }
-        .error { color: #dc2626; text-align: center; margin-bottom: 15px; font-size: 13px; padding: 10px; background: #fee2e2; border-radius: 8px; }
+        .error { color: #dc2626; text-align: center; margin-bottom: 15px; font-size: 13px; padding: 10px; background: #fee2e2; border-radius: 8px; border: 1px solid #fecaca; }
 
         /* Dark Mode fixes for login */
+        html.dark-mode body { background: #0f172a !important; }
         html.dark-mode .box { background: #1e293b !important; }
         html.dark-mode h2 { color: #f1f5f9 !important; }
         html.dark-mode label { color: #cbd5e1 !important; }
         html.dark-mode input { background: #0f172a !important; border-color: #475569 !important; color: #f1f5f9 !important; }
         html.dark-mode .lang-bar button { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
+        
+        /* THIS IS THE FIX FOR THE ERROR MESSAGE IN DARK MODE */
+        html.dark-mode .error { 
+            background: #7f1d1d !important; 
+            color: #fecaca !important; 
+            border: 1px solid #991b1b !important;
+        }
     </style>
     <script>
     (function() {
@@ -97,12 +105,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <img src="logo.png" alt="Logo" class="logo">
         <h2 data-en="Sardam Institute" data-ku="پەیمانگەی سەردەم" data-ar="معهد سردم">Sardam Institute</h2>
         <p class="subtitle" data-en="Computer Sciences" data-ku="زانستەکانی کۆمپیوتەر" data-ar="علوم الحاسوب">Computer Sciences</p>
+        
         <?php if ($error) echo "<p class='error'>$error</p>"; ?>
+        
         <form method="POST">
             <label data-en="Username" data-ku="ناوی بەکارهێنەر" data-ar="اسم المستخدم">Username</label>
             <input type="text" name="username" required autocomplete="username">
+            
             <label data-en="Password" data-ku="وشەی نهێنی" data-ar="كلمة المرور">Password</label>
             <input type="password" name="password" required autocomplete="current-password">
+            
             <button type="submit" class="submit" data-en="Sign In" data-ku="بچۆ ژوورەوە" data-ar="دخول">Sign In</button>
         </form>
     </div>
