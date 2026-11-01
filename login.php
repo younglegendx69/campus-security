@@ -5,24 +5,42 @@ include 'db.php';
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
 
-    $sql = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
-    $result = $conn->query($sql);
+    // 1. Get the user by username only (Secure from SQL Injection)
+    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result->num_rows == 1) {
         $user = $result->fetch_assoc();
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
-
-        if ($user['role'] == 'guard') {
-            header("Location: guard_dashboard.php");
-        } else {
-            header("Location: dashboard.php");
+        
+        $password_matches = false;
+        
+        // 2. Check the password (works for hashes AND plain text)
+        if (password_verify($password, $user['password'])) {
+            $password_matches = true; // It's a hash (like rawa)
+        } elseif ($password === $user['password']) {
+            $password_matches = true; // It's plain text (like admin)
         }
-        exit;
+
+        // 3. If password is correct, log them in
+        if ($password_matches) {
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
+
+            if ($user['role'] == 'guard') {
+                header("Location: guard_dashboard.php");
+            } else {
+                header("Location: dashboard.php");
+            }
+            exit;
+        } else {
+            $error = "Wrong username or password";
+        }
     } else {
         $error = "Wrong username or password";
     }
@@ -31,9 +49,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html>
 <head>
-    <title data-en="Login - Sardam Institute" data-ku="چوونەژوورەوە - پەیمانگەی سەردەم" data-ar="تسجيل الدخول - معهد سردم">Login - Sardam Institute</title>
+    <title>Login - Sardam Institute</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="theme.css?v=99">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -50,6 +68,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         button.submit { width: 100%; padding: 14px; background: #0f172a; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; }
         button.submit:hover { background: #1e293b; }
         .error { color: #dc2626; text-align: center; margin-bottom: 15px; font-size: 13px; padding: 10px; background: #fee2e2; border-radius: 8px; }
+
+        /* Dark Mode fixes for login */
+        html.dark-mode .box { background: #1e293b !important; }
+        html.dark-mode h2 { color: #f1f5f9 !important; }
+        html.dark-mode label { color: #cbd5e1 !important; }
+        html.dark-mode input { background: #0f172a !important; border-color: #475569 !important; color: #f1f5f9 !important; }
+        html.dark-mode .lang-bar button { background: #334155 !important; border-color: #475569 !important; color: #e2e8f0 !important; }
     </style>
     <script>
     (function() {
@@ -75,12 +100,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php if ($error) echo "<p class='error'>$error</p>"; ?>
         <form method="POST">
             <label data-en="Username" data-ku="ناوی بەکارهێنەر" data-ar="اسم المستخدم">Username</label>
-            <input type="text" name="username" required>
+            <input type="text" name="username" required autocomplete="username">
             <label data-en="Password" data-ku="وشەی نهێنی" data-ar="كلمة المرور">Password</label>
-            <input type="password" name="password" required>
+            <input type="password" name="password" required autocomplete="current-password">
             <button type="submit" class="submit" data-en="Sign In" data-ku="بچۆ ژوورەوە" data-ar="دخول">Sign In</button>
         </form>
     </div>
-    <script src="language.js"></script>
+    <script src="language.js?v=99"></script>
 </body>
 </html>
